@@ -1280,8 +1280,8 @@ def run_discovery(llm: LLMClient, config: Config, task: TaskSpec,
     idea_queue = deque(generate_ideas(llm, task, brief_text, brief_ids, store))
     if not idea_queue:
         return None
-    branches = [_Branch(idea_id=idea_queue.popleft())
-                for _ in range(min(config.discovery.branches, len(idea_queue) + 1))]
+    n_branches = min(config.discovery.branches, len(idea_queue))
+    branches = [_Branch(idea_id=idea_queue.popleft()) for _ in range(n_branches)]
 
     for it in range(config.discovery.iterations):
         for bi, br in enumerate(branches):
@@ -1846,6 +1846,9 @@ from ..evidence import EvidenceStore
 
 TAG_RE = re.compile(r"\{ev:(ev_\d+)\}")
 _NUM_RE = re.compile(r"\d+\.\d+|\d{2,}")
+# Sentence boundary: after .!? unless a {ev:...} tag follows (tags trail their
+# sentence), and after a closing tag brace.
+_SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?!\{ev:)|(?<=\})\s+")
 
 
 class GroundIssue(BaseModel):
@@ -1859,7 +1862,7 @@ def sentences(text: str) -> list[str]:
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        out.extend(s.strip() for s in re.split(r"(?<=[.!?])\s+", line) if s.strip())
+        out.extend(s.strip() for s in _SPLIT_RE.split(line) if s.strip())
     return out
 
 
