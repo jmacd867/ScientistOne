@@ -1,0 +1,9 @@
+models:
+  reasoning: gemma4:26b
+  judging: gemma4:12b
+ollama_host: http://localhost:11434
+discovery: {branches: 3, iterations: 4, survivors: 2}
+investigator: {max_papers: 15}
+writer: {max_rounds: 3}
+verifier: {numeric_tolerance: 0.01}
+solver: {timeout_s: 60}
