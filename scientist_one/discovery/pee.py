@@ -73,11 +73,12 @@ def run_discovery(llm: LLMClient, config: Config, task: TaskSpec,
                 br.best_score, br.best_eval_id = outcome.score, eval_id
                 br.best_solution_id, br.best_solution_path = sol_id, str(path)
         if it < config.discovery.iterations - 1 and idea_queue:
-            scored = [b for b in branches if b.best_score is not None]
-            scored.sort(key=lambda b: b.best_score,
-                        reverse=(task.metric_direction == "higher"))
-            survivors = scored[:config.discovery.survivors]
-            refill = [b for b in branches if b not in survivors]
+            scored_indices = [i for i, b in enumerate(branches) if b.best_score is not None]
+            scored_indices.sort(key=lambda i: branches[i].best_score,
+                                reverse=(task.metric_direction == "higher"))
+            survivor_indices = set(scored_indices[:config.discovery.survivors])
+            survivors = [branches[i] for i in scored_indices[:config.discovery.survivors]]
+            refill = [b for i, b in enumerate(branches) if i not in survivor_indices]
             for i, b in enumerate(refill):
                 if idea_queue:
                     refill[i] = _Branch(idea_id=idea_queue.popleft())
