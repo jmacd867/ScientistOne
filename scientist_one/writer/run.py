@@ -31,7 +31,10 @@ def run_writer(llm: LLMClient, config: Config, task: TaskSpec,
             break
         narrative = resolve(llm, narrative, issues)
     else:
-        issues = [f"[{i.kind}] {i.detail}"
+        # Rounds exhausted after a final resolve: re-check the final narrative
+        # with BOTH gates so surviving critic objections aren't dropped.
+        ground = [f"[{i.kind}] {i.detail}"
                   for i in ground_check(narrative, store,
                                         config.verifier.numeric_tolerance)]
+        issues = ground + critic_check(llm, narrative)
     return WriterResult(narrative=narrative, remaining_issues=issues)

@@ -63,3 +63,18 @@ def test_loop_resolves_dirty_narrative(tmp_path):
     result = run_writer(llm, Config(), TASK, store, "brief", disc)
     assert result.narrative == clean
     assert result.remaining_issues == []
+
+
+def test_exhausted_rounds_keeps_critic_issues(tmp_path):
+    store, ev, disc = seeded(tmp_path)
+    dirty = f"The ratio is 9.99. {{ev:{ev}}}"
+    llm = LLMClient(Config(writer={"max_rounds": 1}), tmp_path, backend=FakeBackend([
+        dirty,                                    # conceive
+        NO_ISSUES,                                # critic round 1 (ground is dirty)
+        dirty,                                    # resolve (fails to fix)
+        json.dumps({"issues": ["overclaim"]}),    # final critic re-check
+    ]))
+    result = run_writer(llm, Config(writer={"max_rounds": 1}), TASK, store,
+                        "brief", disc)
+    assert any("number-mismatch" in i for i in result.remaining_issues)
+    assert "overclaim" in result.remaining_issues
