@@ -90,7 +90,8 @@ def run_investigator(llm: LLMClient, config: Config, task: TaskSpec,
     brief_ids = []
     lines = [f"# Research brief: {task.name}", "", brief.framing, "", "## Findings"]
     for claim in brief.claims:
-        sources = [paper_ids[i] for i in claim.paper_indexes if i < len(paper_ids)]
+        sources = [paper_ids[i] for i in claim.paper_indexes
+                   if 0 <= i < len(paper_ids)]
         cid = store.append("brief-claim", "investigator",
                            {"text": claim.text}, sources=sources)
         brief_ids.append(cid)
