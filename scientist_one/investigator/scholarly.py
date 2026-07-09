@@ -29,7 +29,7 @@ def search_semantic_scholar(client: httpx.Client, query: str,
         ext = item.get("externalIds") or {}
         papers.append(PaperMeta(
             title=item.get("title") or "",
-            authors=[a["name"] for a in item.get("authors") or []],
+            authors=[a.get("name", "") for a in item.get("authors") or []],
             year=item.get("year"),
             abstract=item.get("abstract") or "",
             url=item.get("url") or "",
@@ -66,7 +66,7 @@ def search_papers(client: httpx.Client, queries: list[str],
         for fn in (search_semantic_scholar, search_arxiv):
             try:
                 papers.extend(fn(client, query, limit_per_query))
-            except (httpx.HTTPError, ET.ParseError):
+            except (httpx.HTTPError, ET.ParseError, ValueError):
                 continue
     seen: set[str] = set()
     unique = []
