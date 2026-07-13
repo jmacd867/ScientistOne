@@ -83,3 +83,28 @@ def test_audit_catches_score_mismatch(tmp_path):
     report = run_audit(llm, Config(), run_dir, http_client=ref_found_client())
     i1 = next(c for c in report.checks if c.name == "score-verification")
     assert i1.passed is False
+
+
+def ref_not_found_client():
+    empty = {"data": []}
+    def handler(request):
+        if "semanticscholar" in request.url.host:
+            return httpx.Response(200, json=empty)
+        return httpx.Response(200, text='<?xml version="1.0"?>'
+            '<feed xmlns="http://www.w3.org/2005/Atom"></feed>')
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+def test_audit_fabricated_reference_not_confirmed_by_llm(tmp_path):
+    """A reference with zero search hits must be unresolved without ever
+    asking the LLM — a hallucinated 'match: true' must not launder it."""
+    score = get_true_score()
+    run_dir = make_run_dir(tmp_path, score)
+    responses = [json.dumps({"score": score}),
+                 NOT_FLAGGED, NOT_FLAGGED, NOT_FLAGGED,
+                 ALIGNED, ALIGNED, ALIGNED]  # no response reserved for I3 LLM call
+    llm = LLMClient(Config(), tmp_path, backend=FakeBackend(responses))
+    report = run_audit(llm, Config(), run_dir, http_client=ref_not_found_client())
+    i3 = next(c for c in report.checks if c.name == "reference-verification")
+    assert i3.passed is False
+    assert "1 unresolved" in i3.detail

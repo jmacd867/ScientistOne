@@ -72,6 +72,9 @@ def _i3_references(llm, references: list[dict],
         titles = {p.title.strip().casefold() for p in found}
         if ref["title"].strip().casefold() in titles:
             continue
+        if not found:
+            unresolved.append(ref["title"])
+            continue
         verdict = llm.chat_json(
             "judging", "Decide whether any candidate is the same paper. Return JSON.",
             f"Reference: {ref['title']} ({ref.get('year')})\n"
