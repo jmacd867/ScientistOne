@@ -43,6 +43,7 @@ def _ollama_backend(host: str, llm_config: LLMConfig) -> Backend:
             messages=[{"role": "system", "content": system},
                       {"role": "user", "content": user}],
             format=format,
+            think=llm_config.think,
             options={
                 "num_predict": llm_config.max_output_tokens,
                 "temperature": llm_config.temperature,

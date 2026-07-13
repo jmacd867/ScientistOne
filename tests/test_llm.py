@@ -85,8 +85,9 @@ def test_ollama_backend_passes_timeout_and_sampling_options(monkeypatch):
             calls["host"] = host
             calls["timeout"] = timeout
 
-        def chat(self, model, messages, format, options):
+        def chat(self, model, messages, format, think, options):
             calls["options"] = options
+            calls["think"] = think
             return {"message": {"content": "ok"}}
 
     class FakeOllamaModule:
@@ -97,12 +98,13 @@ def test_ollama_backend_passes_timeout_and_sampling_options(monkeypatch):
 
     llm_config = LLMConfig(timeout_s=42, max_output_tokens=777, temperature=0.5,
                            repeat_penalty=1.5, frequency_penalty=0.6,
-                           presence_penalty=0.6)
+                           presence_penalty=0.6, think=False)
     backend = _ollama_backend("http://localhost:11434", llm_config)
     result = backend("gemma4:26b", "sys", "usr", None)
 
     assert result == "ok"
     assert calls["timeout"] == 42
+    assert calls["think"] is False
     assert calls["options"] == {
         "num_predict": 777, "temperature": 0.5, "repeat_penalty": 1.5,
         "frequency_penalty": 0.6, "presence_penalty": 0.6,

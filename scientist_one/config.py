@@ -44,6 +44,15 @@ class LLMConfig(BaseModel):
     repeat_penalty: float = 1.3
     frequency_penalty: float = 0.4
     presence_penalty: float = 0.4
+    # gemma4 is a "thinking" model: it burns generated tokens on an internal
+    # reasoning trace before the final answer. Since max_output_tokens counts
+    # thinking tokens too, a complex prompt can exhaust the whole budget on
+    # reasoning and leave zero tokens for the actual answer — content comes
+    # back empty despite a normal-looking duration. None of this pipeline's
+    # prompts expect or read a separate thinking trace, so it's off by
+    # default; set true (or "low"/"medium"/"high") to re-enable per Ollama's
+    # `think` chat parameter.
+    think: bool = False
 
 
 class Config(BaseModel):

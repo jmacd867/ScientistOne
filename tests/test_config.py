@@ -14,6 +14,7 @@ def test_defaults_when_no_file(tmp_path):
     assert cfg.llm.repeat_penalty == 1.3
     assert cfg.llm.frequency_penalty == 0.4
     assert cfg.llm.presence_penalty == 0.4
+    assert cfg.llm.think is False
 
 
 def test_loads_overrides(tmp_path):
