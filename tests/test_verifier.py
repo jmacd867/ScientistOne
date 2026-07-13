@@ -56,3 +56,14 @@ def test_unfixable_paper_stays_draft(tmp_path):
     assert result.paper_path.endswith("paper.draft.md")
     assert (Path(tmp_path) / "violations.json").exists()
     assert result.violations[0].reason.startswith("number")
+
+
+def test_numeric_claim_on_non_numeric_record_flagged(tmp_path):
+    store, _, _, _ = seeded(tmp_path)
+    idea = store.append("idea", "discovery", {"title": "FFD"})
+    bad = f"# T\nWe achieve a 9.99 improvement. {{ev:{idea}}}\n"
+    llm = LLMClient(Config(), tmp_path, backend=FakeBackend([bad]))  # refiner no-op
+    result = run_verifier(llm, Config(), tmp_path, bad, store, [], CODE)
+    assert result.promoted is False
+    assert any("no eval-result/ablation evidence" in v.reason
+               for v in result.violations)

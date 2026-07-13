@@ -38,6 +38,7 @@ def _verify(llm: LLMClient, config: Config, paper_md: str, store: EvidenceStore,
                 violations.append(Violation(
                     claim=clean, reason="untagged numeric claim (compose drift)"))
             continue
+        numeric_checked = False
         for tag in tags:
             if tag not in known:
                 violations.append(Violation(claim=clean,
@@ -45,6 +46,7 @@ def _verify(llm: LLMClient, config: Config, paper_md: str, store: EvidenceStore,
                 continue
             rec = store.get(tag)
             if rec.type in ("eval-result", "ablation"):
+                numeric_checked = True
                 available = numbers_in_payload(rec.payload)
                 for num in nums:
                     if not any(math.isclose(num, a,
@@ -81,7 +83,11 @@ def _verify(llm: LLMClient, config: Config, paper_md: str, store: EvidenceStore,
                                                 reason=f"unverifiable method {tag}"))
                 elif not verdict.supported:
                     violations.append(Violation(
-                        claim=clean, reason=f"method claim not matched by code"))
+                        claim=clean, reason="method claim not matched by code"))
+        if nums and not numeric_checked:
+            violations.append(Violation(
+                claim=clean,
+                reason="numeric claim has no eval-result/ablation evidence to verify it"))
     return violations
 
 
