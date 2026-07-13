@@ -3,7 +3,7 @@ import json
 import httpx
 import pytest
 from pydantic import BaseModel
-from scientist_one.config import Config
+from scientist_one.config import Config, LLMConfig
 from scientist_one.llm import FakeBackend, LLMClient, _ollama_backend
 
 
@@ -77,7 +77,7 @@ def test_backend_exhaustion_still_raises(tmp_path):
         client.chat("reasoning", "sys", "usr")
 
 
-def test_ollama_backend_passes_timeout_and_num_predict(monkeypatch):
+def test_ollama_backend_passes_timeout_and_sampling_options(monkeypatch):
     calls = {}
 
     class FakeOllamaClient:
@@ -95,10 +95,15 @@ def test_ollama_backend_passes_timeout_and_num_predict(monkeypatch):
     import sys
     monkeypatch.setitem(sys.modules, "ollama", FakeOllamaModule())
 
-    backend = _ollama_backend("http://localhost:11434", timeout_s=42,
-                              max_output_tokens=777)
+    llm_config = LLMConfig(timeout_s=42, max_output_tokens=777, temperature=0.5,
+                           repeat_penalty=1.5, frequency_penalty=0.6,
+                           presence_penalty=0.6)
+    backend = _ollama_backend("http://localhost:11434", llm_config)
     result = backend("gemma4:26b", "sys", "usr", None)
 
     assert result == "ok"
     assert calls["timeout"] == 42
-    assert calls["options"] == {"num_predict": 777}
+    assert calls["options"] == {
+        "num_predict": 777, "temperature": 0.5, "repeat_penalty": 1.5,
+        "frequency_penalty": 0.6, "presence_penalty": 0.6,
+    }

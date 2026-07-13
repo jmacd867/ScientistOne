@@ -7,7 +7,7 @@ from typing import Callable
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from .config import Config
+from .config import Config, LLMConfig
 
 Backend = Callable[[str, str, str, dict | None], str]
 
@@ -26,14 +26,16 @@ class FakeBackend:
         return self.responses.pop(0)
 
 
-def _ollama_backend(host: str, timeout_s: int, max_output_tokens: int) -> Backend:
+def _ollama_backend(host: str, llm_config: LLMConfig) -> Backend:
     import ollama
 
     # timeout bounds a hung/slow request (network stall, dead server); it is
     # independent of max_output_tokens, which bounds a request that IS
     # responding but has fallen into degenerate repetition and would
-    # otherwise run until the server's own internal token ceiling.
-    client = ollama.Client(host=host, timeout=timeout_s)
+    # otherwise run until the server's own internal token ceiling. The
+    # penalty/temperature options push against that same repetition failure
+    # mode directly, rather than just capping how long it's allowed to run.
+    client = ollama.Client(host=host, timeout=llm_config.timeout_s)
 
     def call(model: str, system: str, user: str, format: dict | None) -> str:
         resp = client.chat(
@@ -41,7 +43,13 @@ def _ollama_backend(host: str, timeout_s: int, max_output_tokens: int) -> Backen
             messages=[{"role": "system", "content": system},
                       {"role": "user", "content": user}],
             format=format,
-            options={"num_predict": max_output_tokens},
+            options={
+                "num_predict": llm_config.max_output_tokens,
+                "temperature": llm_config.temperature,
+                "repeat_penalty": llm_config.repeat_penalty,
+                "frequency_penalty": llm_config.frequency_penalty,
+                "presence_penalty": llm_config.presence_penalty,
+            },
         )
         return resp["message"]["content"]
 
@@ -52,8 +60,7 @@ class LLMClient:
     def __init__(self, config: Config, log_dir: Path, backend: Backend | None = None):
         self.config = config
         self.log_path = Path(log_dir) / "llm_calls.jsonl"
-        self.backend = backend or _ollama_backend(
-            config.ollama_host, config.llm.timeout_s, config.llm.max_output_tokens)
+        self.backend = backend or _ollama_backend(config.ollama_host, config.llm)
 
     def _model(self, role: str) -> str:
         return {"reasoning": self.config.models.reasoning,

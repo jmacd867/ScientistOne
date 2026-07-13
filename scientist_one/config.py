@@ -34,6 +34,16 @@ class SolverConfig(BaseModel):
 class LLMConfig(BaseModel):
     timeout_s: int = 300
     max_output_tokens: int = 4096
+    # Anti-repetition sampling. Ollama's own defaults (temperature=1.0,
+    # repeat_penalty=1.1, frequency_penalty=0.0, presence_penalty=0.0) were
+    # not enough to stop gemma4:26b from degenerating into loops like
+    # "in in in in..." on long-context prompts; these values push harder
+    # against exact and near-exact repetition without flattening output
+    # into incoherence.
+    temperature: float = 0.7
+    repeat_penalty: float = 1.3
+    frequency_penalty: float = 0.4
+    presence_penalty: float = 0.4
 
 
 class Config(BaseModel):

@@ -11,6 +11,9 @@ def test_defaults_when_no_file(tmp_path):
     assert cfg.solver.timeout_s == 60
     assert cfg.llm.timeout_s == 300
     assert cfg.llm.max_output_tokens == 4096
+    assert cfg.llm.repeat_penalty == 1.3
+    assert cfg.llm.frequency_penalty == 0.4
+    assert cfg.llm.presence_penalty == 0.4
 
 
 def test_loads_overrides(tmp_path):
