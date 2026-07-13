@@ -25,11 +25,28 @@ class Entailment(BaseModel):
     supported: bool
 
 
-def _verify(llm: LLMClient, config: Config, paper_md: str, store: EvidenceStore,
+_REFERENCES_MARKER = "\n## References"
+
+
+def _split_references(paper_md: str) -> tuple[str, str]:
+    """Split off the renderer's auto-generated References section.
+
+    That section is built deterministically from references.json (not the
+    model), so it is trustworthy by construction and must not be re-scanned
+    as prose — its "(1974)" style years would otherwise read as untagged
+    numeric claims.
+    """
+    idx = paper_md.find(_REFERENCES_MARKER)
+    if idx == -1:
+        return paper_md, ""
+    return paper_md[:idx], paper_md[idx:]
+
+
+def _verify(llm: LLMClient, config: Config, body_md: str, store: EvidenceStore,
             solution_code: str) -> list[Violation]:
     known = {r.id for r in store.all()}
     violations: list[Violation] = []
-    for sent in sentences(paper_md):
+    for sent in sentences(body_md):
         tags = TAG_RE.findall(sent)
         clean = TAG_RE.sub("", sent).strip()
         nums = numbers_in_text(sent)
@@ -38,24 +55,30 @@ def _verify(llm: LLMClient, config: Config, paper_md: str, store: EvidenceStore,
                 violations.append(Violation(
                     claim=clean, reason="untagged numeric claim (compose drift)"))
             continue
-        numeric_checked = False
+        known_tags = []
         for tag in tags:
             if tag not in known:
                 violations.append(Violation(claim=clean,
                                             reason=f"unknown evidence {tag}"))
                 continue
+            known_tags.append(tag)
+        if nums:
+            # Pool numbers across every tagged record's payload (matching
+            # ground_check), so a citation sentence can be corroborated by
+            # numbers in a paper's abstract, not only by eval-result data.
+            available = [n for tag in known_tags
+                         for n in numbers_in_payload(store.get(tag).payload)]
+            for num in nums:
+                if not any(math.isclose(num, a,
+                           rel_tol=config.verifier.numeric_tolerance,
+                           abs_tol=1e-9) for a in available):
+                    violations.append(Violation(
+                        claim=clean,
+                        reason=f"number {num} not supported by evidence "
+                               f"{known_tags}"))
+        for tag in known_tags:
             rec = store.get(tag)
-            if rec.type in ("eval-result", "ablation"):
-                numeric_checked = True
-                available = numbers_in_payload(rec.payload)
-                for num in nums:
-                    if not any(math.isclose(num, a,
-                               rel_tol=config.verifier.numeric_tolerance,
-                               abs_tol=1e-9) for a in available):
-                        violations.append(Violation(
-                            claim=clean,
-                            reason=f"number {num} not in evidence {tag}"))
-            elif rec.type == "paper":
+            if rec.type == "paper":
                 verdict = llm.chat_json(
                     "judging",
                     "Judge whether the abstract supports the claim. Return JSON.",
@@ -84,10 +107,6 @@ def _verify(llm: LLMClient, config: Config, paper_md: str, store: EvidenceStore,
                 elif not verdict.supported:
                     violations.append(Violation(
                         claim=clean, reason="method claim not matched by code"))
-        if nums and not numeric_checked:
-            violations.append(Violation(
-                claim=clean,
-                reason="numeric claim has no eval-result/ablation evidence to verify it"))
     return violations
 
 
@@ -95,17 +114,19 @@ def run_verifier(llm: LLMClient, config: Config, run_dir: Path, paper_md: str,
                  store: EvidenceStore, references: list[dict],
                  solution_code: str) -> VerifierResult:
     run_dir = Path(run_dir)
-    violations = _verify(llm, config, paper_md, store, solution_code)
+    body, references_section = _split_references(paper_md)
+    violations = _verify(llm, config, body, store, solution_code)
     if violations:
         listing = "\n".join(f"- {v.claim}: {v.reason}" for v in violations)
-        paper_md = llm.chat(
+        body = llm.chat(
             "reasoning",
             "You repair research papers. Rewrite each flagged sentence to "
             "match its evidence, or DELETE it if it cannot be supported. "
             "Keep all valid {ev:...} tags. Reply with the full markdown.",
-            f"Paper:\n{paper_md}\n\nFlagged claims:\n{listing}",
-        ) or paper_md
-        violations = _verify(llm, config, paper_md, store, solution_code)
+            f"Paper:\n{body}\n\nFlagged claims:\n{listing}",
+        ) or body
+        violations = _verify(llm, config, body, store, solution_code)
+    paper_md = body + references_section
     if not violations:
         final = TAG_RE.sub("", paper_md)
         path = run_dir / "paper.md"

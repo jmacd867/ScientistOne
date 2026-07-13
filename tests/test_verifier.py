@@ -65,5 +65,30 @@ def test_numeric_claim_on_non_numeric_record_flagged(tmp_path):
     llm = LLMClient(Config(), tmp_path, backend=FakeBackend([bad]))  # refiner no-op
     result = run_verifier(llm, Config(), tmp_path, bad, store, [], CODE)
     assert result.promoted is False
-    assert any("no eval-result/ablation evidence" in v.reason
-               for v in result.violations)
+    assert any("not supported by evidence" in v.reason for v in result.violations)
+
+
+def test_references_section_not_scanned_as_prose(tmp_path):
+    """Regression test: the renderer's auto-generated References section
+    (e.g. "1. D. Johnson (1974). FFD Analysis. url") must not be flagged as
+    an untagged numeric claim — it is deterministic, not model-authored."""
+    store, _, _, ev = seeded(tmp_path)
+    paper = (f"# T\nWe reach ratio 1.08. {{ev:{ev}}}\n"
+             "\n## References\n\n"
+             "1. D. Johnson (1974). FFD Analysis. https://s2/ffd\n")
+    llm = LLMClient(Config(), tmp_path, backend=FakeBackend([]))  # no calls needed
+    result = run_verifier(llm, Config(), tmp_path, paper, store, [], CODE)
+    assert result.promoted is True
+    final = Path(result.paper_path).read_text()
+    assert "## References" in final
+    assert "1974" in final
+
+
+def test_citation_numeric_claim_pooled_against_abstract(tmp_path):
+    """A number in a citation sentence should be corroborated by numbers in
+    the cited paper's abstract, matching ground_check's pooling behavior."""
+    store, paper_rec, _, _ = seeded(tmp_path)  # abstract: "FFD is 11/9 OPT."
+    paper = f"# T\nFFD achieves a ratio of 11. {{ev:{paper_rec}}}\n"
+    llm = LLMClient(Config(), tmp_path, backend=FakeBackend([SUPPORTED]))
+    result = run_verifier(llm, Config(), tmp_path, paper, store, [], CODE)
+    assert result.promoted is True
