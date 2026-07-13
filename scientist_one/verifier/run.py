@@ -7,7 +7,8 @@ from pydantic import BaseModel
 from ..config import Config
 from ..evidence import EvidenceStore
 from ..llm import LLMClient
-from ..writer.ground import TAG_RE, numbers_in_payload, numbers_in_text, sentences
+from ..writer.ground import (TAG_RE, normalize_tags, numbers_in_payload,
+                             numbers_in_text, sentences)
 
 
 class Violation(BaseModel):
@@ -119,17 +120,18 @@ def run_verifier(llm: LLMClient, config: Config, run_dir: Path, paper_md: str,
                  store: EvidenceStore, references: list[dict],
                  solution_code: str) -> VerifierResult:
     run_dir = Path(run_dir)
+    paper_md = normalize_tags(paper_md)
     body, references_section = _split_references(paper_md)
     violations = _verify(llm, config, body, store, solution_code)
     if violations:
         listing = "\n".join(f"- {v.claim}: {v.reason}" for v in violations)
-        body = llm.chat(
+        body = normalize_tags(llm.chat(
             "reasoning",
             "You repair research papers. Rewrite each flagged sentence to "
             "match its evidence, or DELETE it if it cannot be supported. "
             "Keep all valid {ev:...} tags. Reply with the full markdown.",
             f"Paper:\n{body}\n\nFlagged claims:\n{listing}",
-        ) or body
+        ) or body)
         violations = _verify(llm, config, body, store, solution_code)
     paper_md = body + references_section
     if not violations:

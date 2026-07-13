@@ -42,6 +42,7 @@ def test_full_discovery_run(tmp_path):
         NOT_FLAGGED,                                   # audit b0 i0
         COMPONENTS,                                    # ablation component list
         f"```python\n{FF_NOSORT}```",                  # ablation variant code
+        json.dumps({"changed": True}),                 # ablation-validity judge
     ]
     llm = LLMClient(Config(), tmp_path, backend=FakeBackend(responses))
     result = run_discovery(llm, small_config(), TASK, store, tmp_path, "brief", [])
@@ -52,6 +53,7 @@ def test_full_discovery_run(tmp_path):
     abl = store.get(result.ablation_ids[0])
     assert abl.payload["component"] == "descending sort"
     assert abl.sources == [result.best_solution_id]
+    assert abl.payload["valid"] is True
 
 
 def test_no_valid_solution_returns_none(tmp_path):
@@ -122,3 +124,63 @@ def test_pruning_refills_worst_branch_with_next_idea(tmp_path):
         e.payload["score"] for e in store.by_type("eval-result")
         if e.sources == [one_per_bin_solution_id])
     assert result.best_score < one_per_bin_score
+
+
+def test_check_ablation_validity_catches_byte_identical_noop(tmp_path):
+    from scientist_one.discovery.pee import _check_ablation_validity
+
+    llm = LLMClient(Config(), tmp_path, backend=FakeBackend([]))  # no judge call expected
+    valid, reason = _check_ablation_validity(llm, "sorting", FFD_CODE, FFD_CODE)
+    assert valid is False
+    assert "unchanged" in reason
+
+
+def test_check_ablation_validity_catches_cosmetic_rewrite(tmp_path):
+    from scientist_one.discovery.pee import _check_ablation_validity
+
+    cosmetic = FFD_CODE.replace(
+        "bins.append([item])",
+        "new_bin = [item]\n            bins.append(new_bin)")
+    llm = LLMClient(Config(), tmp_path,
+                    backend=FakeBackend([json.dumps({"changed": False})]))
+    valid, reason = _check_ablation_validity(llm, "new bin fallback", FFD_CODE, cosmetic)
+    assert valid is False
+    assert "does not behaviorally change" in reason
+
+
+def test_check_ablation_validity_accepts_genuine_change(tmp_path):
+    from scientist_one.discovery.pee import _check_ablation_validity
+
+    llm = LLMClient(Config(), tmp_path,
+                    backend=FakeBackend([json.dumps({"changed": True})]))
+    valid, reason = _check_ablation_validity(llm, "sorting", FFD_CODE, FF_NOSORT)
+    assert valid is True
+    assert reason == "verified as a genuine modification"
+
+
+def test_check_ablation_validity_judge_failure_defaults_valid(tmp_path):
+    from scientist_one.discovery.pee import _check_ablation_validity
+
+    llm = LLMClient(Config(), tmp_path, backend=FakeBackend(["junk", "junk", "junk"]))
+    valid, reason = _check_ablation_validity(llm, "sorting", FFD_CODE, FF_NOSORT)
+    assert valid is True
+    assert "unable to verify" in reason
+
+
+def test_noop_ablation_marked_invalid_in_full_discovery_run(tmp_path):
+    store = EvidenceStore(tmp_path / "e.jsonl")
+    responses = [
+        IDEAS_A, IDEAS_B, SCORES,
+        f"```python\n{FFD_CODE}```",
+        NOT_FLAGGED,
+        COMPONENTS,
+        f"```python\n{FFD_CODE}```",  # ablation "variant" — solver just echoes original
+        # no judge response scripted: the deterministic byte-identical check
+        # must catch this without ever consulting the judge model
+    ]
+    llm = LLMClient(Config(), tmp_path, backend=FakeBackend(responses))
+    result = run_discovery(llm, small_config(), TASK, store, tmp_path, "brief", [])
+    assert result is not None
+    abl = store.get(result.ablation_ids[0])
+    assert abl.payload["valid"] is False
+    assert "unchanged" in abl.payload["validity_reason"]

@@ -116,3 +116,26 @@ def test_compose_then_verify_promotes_with_real_references(tmp_path):
     assert result.promoted is True
     final = Path(result.paper_path).read_text()
     assert "FFD Analysis" in final
+
+
+def test_multi_id_bracket_citation_normalized_and_promoted(tmp_path):
+    """Regression test for the production bug: a model citing multiple
+    evidence records in one bracket (square OR curly, comma-separated)
+    instead of one tag per record. Before normalize_tags, this both failed
+    to register as a citation AND caused the IDs' own digits to be
+    misread as an unverified numeric claim."""
+    store, _, sol, ev = seeded(tmp_path)
+    ab1 = store.append("ablation", "discovery",
+                       {"component": "Sorting", "score": 1.2,
+                        "baseline_score": 1.08, "ok": True, "valid": True},
+                       sources=[sol])
+    ab2 = store.append("ablation", "discovery",
+                       {"component": "Best Fit", "score": 1.3,
+                        "baseline_score": 1.08, "ok": True, "valid": True},
+                       sources=[sol])
+    paper = (f"# T\nAn ablation study was conducted [ev:{ab1}, ev:{ab2}] on "
+             "components.\n"
+             f"The change resulted in a ratio of 1.2 {{ev:{ab1}, ev:{ab2}}}.\n")
+    llm = LLMClient(Config(), tmp_path, backend=FakeBackend([]))  # no judge calls needed
+    result = run_verifier(llm, Config(), tmp_path, paper, store, [], CODE)
+    assert result.promoted is True

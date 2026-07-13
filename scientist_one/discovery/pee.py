@@ -1,3 +1,4 @@
+import ast
 from collections import deque
 from pathlib import Path
 
@@ -32,6 +33,64 @@ class DiscoveryResult(BaseModel):
 
 class ComponentList(BaseModel):
     components: list[str]
+
+
+class AblationChanged(BaseModel):
+    changed: bool
+
+
+def _normalize_code(code: str) -> str:
+    """Strip docstrings so a cosmetic-only rewrite (renamed temp variables,
+    reflowed logic, restyled fallback branch) compares equal to the original
+    — the check that follows cares about behavior, not prose."""
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return code.strip()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef,
+                             ast.ClassDef)) and node.body:
+            first = node.body[0]
+            if (isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant)
+                    and isinstance(first.value.value, str)):
+                node.body = node.body[1:] or [ast.Pass()]
+    try:
+        return ast.unparse(tree)
+    except Exception:
+        return code.strip()
+
+
+def _check_ablation_validity(llm: LLMClient, component: str, baseline_code: str,
+                             ablation_code: str) -> tuple[bool, str]:
+    """Detect ablations that never actually changed the algorithm.
+
+    A solver LLM asked to "disable component X" can just return the
+    original code unchanged, or a superficial rewrite (renamed variables,
+    an equivalent refactor) that behaves identically. Either way, the
+    resulting "no score change" isn't a real ablation finding — it's a
+    no-op re-run of the same program — so it must not be presented as one.
+    """
+    if _normalize_code(baseline_code) == _normalize_code(ablation_code):
+        return False, "ablation code is unchanged from the baseline solution"
+    verdict = llm.chat_json(
+        "judging",
+        "You compare two versions of an algorithm. Return JSON.",
+        f"Original code:\n```python\n{baseline_code}```\n\n"
+        f"Claimed modification: disable or replace '{component}'.\n\n"
+        f"Modified code:\n```python\n{ablation_code}```\n\n"
+        "Does the modified code actually implement a behaviorally different "
+        "algorithm for this component, or does it behave the same as the "
+        "original despite superficial differences (renamed variables, "
+        "reflowed logic, equivalent refactoring)? "
+        'Return {"changed": bool} — true only if the behavior actually differs.',
+        AblationChanged,
+    )
+    if verdict is None:
+        return True, "unable to verify behavioral difference; syntactic diff found"
+    if not verdict.changed:
+        return False, ("code differs syntactically but does not behaviorally "
+                       "change the component")
+    return True, "verified as a genuine modification"
 
 
 def run_discovery(llm: LLMClient, config: Config, task: TaskSpec,
@@ -127,11 +186,13 @@ def _run_ablations(llm: LLMClient, config: Config, task: TaskSpec,
         variant = _extract_code(reply)
         if variant is None:
             continue
+        valid, validity_reason = _check_ablation_validity(llm, component, code, variant)
         vpath = run_dir / "solutions" / f"ablation_{i}.py"
         vpath.write_text(variant)
         outcome = run_evaluation(task, vpath, run_dir / "eval_work", timeout)
         ids.append(store.append("ablation", "discovery", {
             "component": component, "ok": outcome.ok, "score": outcome.score,
-            "baseline_score": best.best_score,
+            "baseline_score": best.best_score, "valid": valid,
+            "validity_reason": validity_reason,
         }, sources=[best.best_solution_id]))
     return ids
