@@ -31,6 +31,11 @@ class SolverConfig(BaseModel):
     timeout_s: int = 60
 
 
+class LLMConfig(BaseModel):
+    timeout_s: int = 300
+    max_output_tokens: int = 4096
+
+
 class Config(BaseModel):
     models: ModelConfig = ModelConfig()
     ollama_host: str = "http://localhost:11434"
@@ -39,6 +44,7 @@ class Config(BaseModel):
     writer: WriterConfig = WriterConfig()
     verifier: VerifierConfig = VerifierConfig()
     solver: SolverConfig = SolverConfig()
+    llm: LLMConfig = LLMConfig()
 
 
 def load_config(path: Path | None = None) -> Config:

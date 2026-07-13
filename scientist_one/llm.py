@@ -4,6 +4,7 @@ import time
 from pathlib import Path
 from typing import Callable
 
+import httpx
 from pydantic import BaseModel, ValidationError
 
 from .config import Config
@@ -25,10 +26,14 @@ class FakeBackend:
         return self.responses.pop(0)
 
 
-def _ollama_backend(host: str) -> Backend:
+def _ollama_backend(host: str, timeout_s: int, max_output_tokens: int) -> Backend:
     import ollama
 
-    client = ollama.Client(host=host)
+    # timeout bounds a hung/slow request (network stall, dead server); it is
+    # independent of max_output_tokens, which bounds a request that IS
+    # responding but has fallen into degenerate repetition and would
+    # otherwise run until the server's own internal token ceiling.
+    client = ollama.Client(host=host, timeout=timeout_s)
 
     def call(model: str, system: str, user: str, format: dict | None) -> str:
         resp = client.chat(
@@ -36,6 +41,7 @@ def _ollama_backend(host: str) -> Backend:
             messages=[{"role": "system", "content": system},
                       {"role": "user", "content": user}],
             format=format,
+            options={"num_predict": max_output_tokens},
         )
         return resp["message"]["content"]
 
@@ -46,7 +52,8 @@ class LLMClient:
     def __init__(self, config: Config, log_dir: Path, backend: Backend | None = None):
         self.config = config
         self.log_path = Path(log_dir) / "llm_calls.jsonl"
-        self.backend = backend or _ollama_backend(config.ollama_host)
+        self.backend = backend or _ollama_backend(
+            config.ollama_host, config.llm.timeout_s, config.llm.max_output_tokens)
 
     def _model(self, role: str) -> str:
         return {"reasoning": self.config.models.reasoning,
@@ -55,13 +62,23 @@ class LLMClient:
     def _call(self, role: str, system: str, user: str, format: dict | None) -> str:
         model = self._model(role)
         start = time.monotonic()
-        response = self.backend(model, system, user, format)
+        error = None
+        try:
+            response = self.backend(model, system, user, format)
+        except (httpx.HTTPError, TimeoutError) as exc:
+            # A hung/timed-out/unreachable backend degrades like any other
+            # malformed or empty LLM response: chat() callers already treat
+            # "" as falsy and fall back, chat_json()'s retry loop already
+            # treats unparseable output as a failed attempt.
+            response = ""
+            error = str(exc)
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
+        entry = {"model": model, "system": system, "user": user,
+                 "response": response, "duration_s": round(time.monotonic() - start, 2)}
+        if error is not None:
+            entry["error"] = error
         with self.log_path.open("a") as f:
-            f.write(json.dumps({
-                "model": model, "system": system, "user": user,
-                "response": response, "duration_s": round(time.monotonic() - start, 2),
-            }) + "\n")
+            f.write(json.dumps(entry) + "\n")
         return response
 
     def chat(self, role: str, system: str, user: str) -> str:

@@ -9,6 +9,8 @@ def test_defaults_when_no_file(tmp_path):
     assert cfg.models.judging == "gemma4:12b"
     assert cfg.discovery.branches == 3
     assert cfg.solver.timeout_s == 60
+    assert cfg.llm.timeout_s == 300
+    assert cfg.llm.max_output_tokens == 4096
 
 
 def test_loads_overrides(tmp_path):
