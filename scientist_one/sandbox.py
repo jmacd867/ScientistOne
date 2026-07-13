@@ -11,11 +11,12 @@ from .tasks.base import TaskSpec
 
 _RUNNER = textwrap.dedent("""
     import importlib.util, json, sys
+    marker = sys.argv.pop(4)  # remove before evaluator/solution code can run
     spec = importlib.util.spec_from_file_location("evaluator", sys.argv[1])
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     result = mod.evaluate(sys.argv[2], sys.argv[3])
-    print(sys.argv[4] + json.dumps(result))
+    print(marker + json.dumps(result))
 """)
 
 

@@ -4,7 +4,9 @@ from pathlib import Path
 from scientist_one.config import Config
 from scientist_one.evidence import EvidenceStore
 from scientist_one.llm import FakeBackend, LLMClient
+from scientist_one.tasks.base import load_task
 from scientist_one.verifier.run import run_verifier
+from scientist_one.writer.compose import compose
 
 SUPPORTED = json.dumps({"supported": True})
 UNSUPPORTED = json.dumps({"supported": False})
@@ -92,3 +94,25 @@ def test_citation_numeric_claim_pooled_against_abstract(tmp_path):
     llm = LLMClient(Config(), tmp_path, backend=FakeBackend([SUPPORTED]))
     result = run_verifier(llm, Config(), tmp_path, paper, store, [], CODE)
     assert result.promoted is True
+
+
+def test_compose_then_verify_promotes_with_real_references(tmp_path):
+    """Integration test: guards the coupling between compose()'s renderer
+    output and run_verifier's references-section detection. If either side's
+    '## References' heading drifts, this fails instead of the false positive
+    silently returning."""
+    store, paper_rec, _, ev = seeded(tmp_path)
+    task = load_task(Path("tasks/bin_packing"))
+    references = [{"title": "FFD Analysis", "authors": ["D. Johnson"], "year": 1974,
+                  "url": "https://s2/ffd", "abstract": "", "source": "semantic_scholar",
+                  "external_id": "10.1/ffd"}]
+    body = f"## Results\nWe reach ratio 1.08. {{ev:{ev}}}\n"
+    compose_llm = LLMClient(Config(), tmp_path, backend=FakeBackend([body]))
+    paper_md = compose(compose_llm, task, "narrative", references)
+
+    verify_llm = LLMClient(Config(), tmp_path, backend=FakeBackend([]))
+    result = run_verifier(verify_llm, Config(), tmp_path, paper_md, store,
+                          references, CODE)
+    assert result.promoted is True
+    final = Path(result.paper_path).read_text()
+    assert "FFD Analysis" in final

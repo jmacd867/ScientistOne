@@ -35,8 +35,13 @@ def _split_references(paper_md: str) -> tuple[str, str]:
     model), so it is trustworthy by construction and must not be re-scanned
     as prose — its "(1974)" style years would otherwise read as untagged
     numeric claims.
+
+    Splits at the LAST occurrence of the marker: compose is instructed not
+    to emit its own References heading, but its output isn't trusted, so if
+    it disobeys and includes one mid-body, that fake section still gets
+    scanned as prose — only the renderer's trailing section is exempt.
     """
-    idx = paper_md.find(_REFERENCES_MARKER)
+    idx = paper_md.rfind(_REFERENCES_MARKER)
     if idx == -1:
         return paper_md, ""
     return paper_md[:idx], paper_md[idx:]
