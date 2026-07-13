@@ -3,7 +3,9 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .audit.run import run_audit
 from .config import load_config
+from .llm import LLMClient
 from .pipeline import run_pipeline
 
 STAGES = ("investigator", "discovery", "writer")
@@ -22,6 +24,10 @@ def main(argv=None):
     status_p = sub.add_parser("status", help="show stage completion for a run")
     status_p.add_argument("run_dir", type=Path)
 
+    audit_p = sub.add_parser("audit", help="run the CoE integrity audit on a run")
+    audit_p.add_argument("run_dir", type=Path)
+    audit_p.add_argument("--config", type=Path, default=Path("config.yaml"))
+
     args = parser.parse_args(argv)
     if args.command == "run":
         run_dir = args.run_dir or Path("runs") / datetime.now(
@@ -36,6 +42,13 @@ def main(argv=None):
         manifest = args.run_dir / "manifest.json"
         if manifest.exists():
             print(json.loads(manifest.read_text())["status"])
+    elif args.command == "audit":
+        config = load_config(args.config)
+        llm = LLMClient(config, args.run_dir)
+        report = run_audit(llm, config, args.run_dir)
+        for check in report.checks:
+            mark = {True: "PASS", False: "FAIL", None: "N/A "}[check.passed]
+            print(f"[{mark}] {check.name}: {check.detail}")
 
 
 if __name__ == "__main__":
