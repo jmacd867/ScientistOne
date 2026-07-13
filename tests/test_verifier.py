@@ -52,7 +52,9 @@ def test_numeric_violation_refined_then_promoted(tmp_path):
 def test_unfixable_paper_stays_draft(tmp_path):
     store, _, _, ev = seeded(tmp_path)
     bad = f"# T\nWe reach ratio 9.99. {{ev:{ev}}}\n"
-    llm = LLMClient(Config(), tmp_path, backend=FakeBackend([bad]))  # refiner no-op
+    # Refiner is unable to fix it across all 3 default rounds — every
+    # attempt echoes the same broken text back.
+    llm = LLMClient(Config(), tmp_path, backend=FakeBackend([bad, bad, bad]))
     result = run_verifier(llm, Config(), tmp_path, bad, store, [], CODE)
     assert result.promoted is False
     assert result.paper_path.endswith("paper.draft.md")
@@ -64,7 +66,7 @@ def test_numeric_claim_on_non_numeric_record_flagged(tmp_path):
     store, _, _, _ = seeded(tmp_path)
     idea = store.append("idea", "discovery", {"title": "FFD"})
     bad = f"# T\nWe achieve a 9.99 improvement. {{ev:{idea}}}\n"
-    llm = LLMClient(Config(), tmp_path, backend=FakeBackend([bad]))  # refiner no-op
+    llm = LLMClient(Config(), tmp_path, backend=FakeBackend([bad, bad, bad]))
     result = run_verifier(llm, Config(), tmp_path, bad, store, [], CODE)
     assert result.promoted is False
     assert any("not supported by evidence" in v.reason for v in result.violations)
@@ -139,3 +141,38 @@ def test_multi_id_bracket_citation_normalized_and_promoted(tmp_path):
     llm = LLMClient(Config(), tmp_path, backend=FakeBackend([]))  # no judge calls needed
     result = run_verifier(llm, Config(), tmp_path, paper, store, [], CODE)
     assert result.promoted is True
+
+
+def test_verifier_near_miss_hint_in_unknown_evidence_reason(tmp_path):
+    store, _, _, ev = seeded(tmp_path)
+    wrong_id = "ev_" + ev[len("ev_"):].lstrip("0").rjust(3, "0")
+    bad = f"# T\nSome claim. {{ev:{wrong_id}}}\n"
+    llm = LLMClient(Config(), tmp_path, backend=FakeBackend([bad, bad, bad]))
+    result = run_verifier(llm, Config(), tmp_path, bad, store, [], CODE)
+    assert result.promoted is False
+    assert any(f"did you mean {ev}?" in v.reason for v in result.violations)
+
+
+def test_verifier_flags_malformed_tag_as_its_own_violation(tmp_path):
+    store, _, _, _ = seeded(tmp_path)
+    bad = "# T\nThe problem is NP-hard {ev:ev_004CA}.\n"
+    llm = LLMClient(Config(), tmp_path, backend=FakeBackend([bad, bad, bad]))
+    result = run_verifier(llm, Config(), tmp_path, bad, store, [], CODE)
+    assert result.promoted is False
+    reasons = [v.reason for v in result.violations]
+    assert any("malformed evidence tag" in r for r in reasons)
+    assert not any("untagged numeric" in r for r in reasons)
+
+
+def test_verifier_multi_round_refine_succeeds_on_second_attempt(tmp_path):
+    """Regression test for the production incident: a single refiner pass
+    wasn't enough to fix a lingering violation, but a second attempt was.
+    Confirms max_refine_rounds actually loops rather than giving up after one."""
+    store, _, _, ev = seeded(tmp_path)
+    bad = f"# T\nWe reach ratio 9.99. {{ev:{ev}}}\n"
+    still_bad = f"# T\nWe reach ratio 9.98. {{ev:{ev}}}\n"  # refiner tries, still wrong
+    fixed = f"# T\nWe reach ratio 1.08. {{ev:{ev}}}\n"       # second attempt succeeds
+    llm = LLMClient(Config(), tmp_path, backend=FakeBackend([still_bad, fixed]))
+    result = run_verifier(llm, Config(), tmp_path, bad, store, [], CODE)
+    assert result.promoted is True
+    assert "1.08" in Path(result.paper_path).read_text()

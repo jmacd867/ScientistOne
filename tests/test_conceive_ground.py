@@ -115,3 +115,23 @@ def test_conceive_excludes_invalid_ablations_from_prompt(tmp_path):
     assert "Best Fit logic" in prompt_sent
     assert "1 additional ablation attempt(s)" in prompt_sent
     assert "'Sorting' disabled" not in prompt_sent
+
+
+def test_ground_check_near_miss_hint_for_dropped_leading_zero(tmp_path):
+    store, _, ev = seeded_store(tmp_path)
+    # ev is 4-digit zero-padded (e.g. "ev_0003"); drop one leading zero.
+    wrong_id = "ev_" + ev[len("ev_"):].lstrip("0").rjust(3, "0")
+    narrative = f"Some claim. {{ev:{wrong_id}}}"
+    issues = ground_check(narrative, store, 0.01)
+    assert len(issues) == 1
+    assert issues[0].kind == "unknown-tag"
+    assert f"did you mean {ev}?" in issues[0].detail
+
+
+def test_ground_check_flags_malformed_tag_not_numeric(tmp_path):
+    store, _, _ = seeded_store(tmp_path)
+    narrative = "The problem is NP-hard {ev:ev_004CA}."
+    issues = ground_check(narrative, store, 0.01)
+    kinds = [i.kind for i in issues]
+    assert kinds == ["malformed-tag"]  # not "untagged-numeric"
+    assert "ev:ev_004CA" in issues[0].detail

@@ -25,6 +25,11 @@ class WriterConfig(BaseModel):
 
 class VerifierConfig(BaseModel):
     numeric_tolerance: float = 0.01
+    # How many verify->refine cycles to run before giving up and leaving the
+    # paper as a draft. A single small ID typo (e.g. a dropped leading zero)
+    # often isn't fixed on the first refiner attempt; observed production
+    # runs needed a second or third pass to actually converge.
+    max_refine_rounds: int = 3
 
 
 class SolverConfig(BaseModel):

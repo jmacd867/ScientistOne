@@ -7,7 +7,8 @@ from pydantic import BaseModel
 from ..config import Config
 from ..evidence import EvidenceStore
 from ..llm import LLMClient
-from ..writer.ground import (TAG_RE, normalize_tags, numbers_in_payload,
+from ..writer.ground import (TAG_RE, malformed_tags, near_miss_hint,
+                             normalize_tags, numbers_in_payload,
                              numbers_in_text, sentences)
 
 
@@ -56,6 +57,9 @@ def _verify(llm: LLMClient, config: Config, body_md: str, store: EvidenceStore,
         tags = TAG_RE.findall(sent)
         clean = TAG_RE.sub("", sent).strip()
         nums = numbers_in_text(sent)
+        for garbage in malformed_tags(sent):
+            violations.append(Violation(claim=clean,
+                                        reason=f"malformed evidence tag {garbage}"))
         if not tags:
             if nums:
                 violations.append(Violation(
@@ -64,8 +68,9 @@ def _verify(llm: LLMClient, config: Config, body_md: str, store: EvidenceStore,
         known_tags = []
         for tag in tags:
             if tag not in known:
+                hint = near_miss_hint(tag, known)
                 violations.append(Violation(claim=clean,
-                                            reason=f"unknown evidence {tag}"))
+                                            reason=f"unknown evidence {tag}{hint}"))
                 continue
             known_tags.append(tag)
         if nums:
@@ -123,13 +128,17 @@ def run_verifier(llm: LLMClient, config: Config, run_dir: Path, paper_md: str,
     paper_md = normalize_tags(paper_md)
     body, references_section = _split_references(paper_md)
     violations = _verify(llm, config, body, store, solution_code)
-    if violations:
+    for _ in range(config.verifier.max_refine_rounds):
+        if not violations:
+            break
         listing = "\n".join(f"- {v.claim}: {v.reason}" for v in violations)
         body = normalize_tags(llm.chat(
             "reasoning",
             "You repair research papers. Rewrite each flagged sentence to "
             "match its evidence, or DELETE it if it cannot be supported. "
-            "Keep all valid {ev:...} tags. Reply with the full markdown.",
+            "A hint like '(did you mean ev_0046?)' names the exact correct "
+            "evidence ID — use it verbatim. Keep all valid {ev:...} tags. "
+            "Reply with the full markdown.",
             f"Paper:\n{body}\n\nFlagged claims:\n{listing}",
         ) or body)
         violations = _verify(llm, config, body, store, solution_code)

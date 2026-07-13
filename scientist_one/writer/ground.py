@@ -13,6 +13,11 @@ _SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?!\{ev:)|(?<=\})\s+")
 # Matches one-or-more evidence IDs bundled in a single bracket pair, in
 # either bracket style: "[ev:ev_0047, ev:ev_0048]" or "{ev:ev_0047}".
 _MULTI_TAG_RE = re.compile(r"[\{\[]\s*ev:\s*(ev_\d+(?:\s*,\s*ev:\s*ev_\d+)*)\s*[\}\]]")
+# Loose citation shape: any bracket pair starting with "ev:", regardless of
+# what's inside — used to catch garbled IDs (e.g. "{ev:ev_004CA}") that
+# don't match TAG_RE/_MULTI_TAG_RE's strict ev_\d+ requirement at all, so
+# they don't silently leak their embedded digits into a numeric-claim check.
+_LOOSE_TAG_RE = re.compile(r"[\{\[]\s*ev:\s*([^{}\[\]]*?)\s*[\}\]]")
 
 
 def normalize_tags(text: str) -> str:
@@ -52,8 +57,36 @@ def sentences(text: str) -> list[str]:
     return out
 
 
+def malformed_tags(sent: str) -> list[str]:
+    """Citation-shaped brackets that don't reduce to a canonical {ev:ev_XXXX}
+    tag even after normalize_tags — e.g. a hallucinated ID with letters in
+    it ("{ev:ev_004CA}"). Returns each such occurrence verbatim, so it can be
+    surfaced as its own violation instead of its embedded digits leaking
+    into a numeric-claim check as an unrelated "fact"."""
+    out = []
+    for m in _LOOSE_TAG_RE.finditer(sent):
+        if not re.fullmatch(r"ev_\d+", m.group(1).strip()):
+            out.append(m.group(0))
+    return out
+
+
+def near_miss_hint(tag: str, known_ids: set[str]) -> str:
+    """If inserting a single '0' right after 'ev_' turns this tag into a
+    real ID, say so — models have been observed reliably dropping exactly
+    one leading zero when copying 4-digit zero-padded evidence IDs (e.g.
+    writing "ev_046" for "ev_0046"). Giving the refiner this hint directly,
+    rather than just "unknown", makes the very next attempt far more likely
+    to actually fix it instead of guessing again."""
+    if not tag.startswith("ev_"):
+        return ""
+    candidate = f"ev_0{tag[len('ev_'):]}"
+    return f" (did you mean {candidate}?)" if candidate in known_ids else ""
+
+
 def numbers_in_text(s: str) -> list[float]:
-    return [float(m) for m in _NUM_RE.findall(TAG_RE.sub("", s))]
+    s = TAG_RE.sub("", s)
+    s = _LOOSE_TAG_RE.sub("", s)
+    return [float(m) for m in _NUM_RE.findall(s)]
 
 
 def numbers_in_payload(obj) -> list[float]:
@@ -73,14 +106,19 @@ def numbers_in_payload(obj) -> list[float]:
 def ground_check(narrative: str, store: EvidenceStore,
                  tolerance: float) -> list[GroundIssue]:
     issues: list[GroundIssue] = []
+    known_ids = {r.id for r in store.all()}
     for sent in sentences(narrative):
         tags = TAG_RE.findall(sent)
         known, unknown = [], []
         for tag in tags:
-            (unknown, known)[tag in {r.id for r in store.all()}].append(tag)
+            (unknown, known)[tag in known_ids].append(tag)
         for tag in unknown:
+            hint = near_miss_hint(tag, known_ids)
             issues.append(GroundIssue(kind="unknown-tag",
-                                      detail=f"{tag} in: {sent}"))
+                                      detail=f"{tag}{hint} in: {sent}"))
+        for garbage in malformed_tags(sent):
+            issues.append(GroundIssue(kind="malformed-tag",
+                                      detail=f"{garbage} in: {sent}"))
         nums = numbers_in_text(sent)
         if nums and not tags:
             issues.append(GroundIssue(kind="untagged-numeric", detail=sent))
