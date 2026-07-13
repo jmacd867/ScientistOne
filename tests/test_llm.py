@@ -85,10 +85,11 @@ def test_ollama_backend_passes_timeout_and_sampling_options(monkeypatch):
             calls["host"] = host
             calls["timeout"] = timeout
 
-        def chat(self, model, messages, format, think, options):
+        def chat(self, model, messages, format, think, stream, options):
             calls["options"] = options
             calls["think"] = think
-            return {"message": {"content": "ok"}}
+            calls["stream"] = stream
+            return iter([{"message": {"content": "ok"}}])
 
     class FakeOllamaModule:
         Client = FakeOllamaClient
@@ -105,7 +106,35 @@ def test_ollama_backend_passes_timeout_and_sampling_options(monkeypatch):
     assert result == "ok"
     assert calls["timeout"] == 42
     assert calls["think"] is False
+    assert calls["stream"] is True
     assert calls["options"] == {
         "num_predict": 777, "temperature": 0.5, "repeat_penalty": 1.5,
         "frequency_penalty": 0.6, "presence_penalty": 0.6,
     }
+
+
+def test_ollama_backend_accumulates_streamed_content_and_thinking(monkeypatch):
+    class FakeOllamaClient:
+        def __init__(self, host, timeout):
+            pass
+
+        def chat(self, model, messages, format, think, stream, options):
+            return iter([
+                {"message": {"thinking": "Let me consider... "}},
+                {"message": {"thinking": "okay, done."}},
+                {"message": {"content": "The "}},
+                {"message": {"content": "answer."}},
+            ])
+
+    class FakeOllamaModule:
+        Client = FakeOllamaClient
+
+    import sys
+    monkeypatch.setitem(sys.modules, "ollama", FakeOllamaModule())
+
+    backend = _ollama_backend("http://localhost:11434", LLMConfig())
+    result = backend("gemma4:26b", "sys", "usr", None)
+
+    # Only accumulated *content* is returned — thinking is printed live for
+    # visibility but never enters the value callers parse/log as the reply.
+    assert result == "The answer."

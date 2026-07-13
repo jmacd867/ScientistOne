@@ -38,12 +38,13 @@ def _ollama_backend(host: str, llm_config: LLMConfig) -> Backend:
     client = ollama.Client(host=host, timeout=llm_config.timeout_s)
 
     def call(model: str, system: str, user: str, format: dict | None) -> str:
-        resp = client.chat(
+        stream = client.chat(
             model=model,
             messages=[{"role": "system", "content": system},
                       {"role": "user", "content": user}],
             format=format,
             think=llm_config.think,
+            stream=True,
             options={
                 "num_predict": llm_config.max_output_tokens,
                 "temperature": llm_config.temperature,
@@ -52,7 +53,31 @@ def _ollama_backend(host: str, llm_config: LLMConfig) -> Backend:
                 "presence_penalty": llm_config.presence_penalty,
             },
         )
-        return resp["message"]["content"]
+        content_parts: list[str] = []
+        printed_header = False
+        printed_thinking_label = False
+        printed_answer_label = False
+        for chunk in stream:
+            msg = chunk["message"]
+            if not printed_header:
+                print(f"\n=== {model} ===", flush=True)
+                printed_header = True
+            thinking = msg.get("thinking")
+            if thinking:
+                if not printed_thinking_label:
+                    print("[thinking] ", end="", flush=True)
+                    printed_thinking_label = True
+                print(thinking, end="", flush=True)
+            content = msg.get("content")
+            if content:
+                if not printed_answer_label:
+                    print("\n[answer] ", end="", flush=True)
+                    printed_answer_label = True
+                print(content, end="", flush=True)
+                content_parts.append(content)
+        if printed_header:
+            print(flush=True)
+        return "".join(content_parts)
 
     return call
 
