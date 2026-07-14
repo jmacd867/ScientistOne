@@ -138,7 +138,7 @@ prereq_readiness = min(recall_probability(p, session) for p in topic.prerequisit
 new_stability = max(0.1, BASE_INTRODUCTION_GAIN * learner.learning_rate
                           * difficulty_factor(topic, learner) * prereq_readiness)
 ```
-`BASE_INTRODUCTION_GAIN = 1.0`. Introducing with weak prerequisites is
+`BASE_INTRODUCTION_GAIN = 20.0`. Introducing with weak prerequisites is
 allowed (not blocked) but starts the topic with low stability — "you can
 start calculus with shaky algebra, it'll just be harder to make it stick."
 Re-introducing an already-introduced topic is a no-op (wastes the session).
@@ -151,7 +151,7 @@ retrievability_bonus = max(0, 1 - abs(recall_before - 0.7))
 new_stability = stability + BASE_REVIEW_GAIN * learner.learning_rate
                              * difficulty_factor(topic, learner) * retrievability_bonus
 ```
-`BASE_REVIEW_GAIN = 2.0`. This is "desirable difficulty": review timed near
+`BASE_REVIEW_GAIN = 40.0`. This is "desirable difficulty": review timed near
 ~70% recall gives the biggest stability gain; reviewing something fresh
 (~100%) or already forgotten (~0%) gives little. Reviewing a
 not-yet-introduced topic is a no-op (wastes the session).
@@ -161,17 +161,35 @@ Both actions set `last_touched_session = session` on success (no-ops don't).
 **Mastery & scoring:** `MASTERY_THRESHOLD = 0.85`. A learner's
 `sessions_to_mastery` is the first session at which every topic's
 `recall_probability >= MASTERY_THRESHOLD` simultaneously, capped at
-`BUDGET = 300`. If not reached by the cap:
+`BUDGET = 3000`. If not reached by the cap:
 `score = BUDGET + 20 * (count of topics below threshold at the cap)` — keeps
 the signal smooth for policies that get close but don't finish, instead of a
 flat "failed" score indistinguishable from a much worse policy.
 
-**Note on calibration:** `BASE_INTRODUCTION_GAIN`, `BASE_REVIEW_GAIN`, and
-the archetype parameters are a reasoned starting point, not empirically
-validated numbers — the implementation plan must include a calibration step
-(run a few hand-written policies, including the naive starter and a
-"review-at-0.7" policy, and adjust constants if the score range is either
-trivially easy or effectively unreachable for every policy tried).
+**Calibration result (validated by direct simulation before implementation,
+not left as an open implementation-time step):** the first-drafted constants
+(`BASE_INTRODUCTION_GAIN=1.0`, `BASE_REVIEW_GAIN=2.0`, `BUDGET=300`) were
+unreachable — with 20 topics needing simultaneous ≥0.85 recall under a
+single-action-per-session clock, every policy tried (naive plus several
+hand-written heuristics) hit the budget cap with no differentiation between
+them. Scaling the two gain constants 20x and the budget 10x (values above)
+produces a well-behaved range: the naive starter scores 60–180 sessions
+depending on learner archetype, and no policy tried hits the cap.
+
+A second finding changes the *testing* approach below (not the mechanics
+above): a hand-written policy that reviews whichever introduced topic's
+recall is closest to 0.7 turned out to be **degenerate** — once several
+topics are hovering near 0.7, a topic that has already decayed further
+(recall ~0.3 or lower) can never again be "closest to 0.7," so it's
+permanently neglected and the run hits the budget cap for every learner.
+This doesn't invalidate the review-gain formula (a single review still gains
+the most stability at ~0.7 recall) — it means *which* topic to review next
+should not be chosen by proximity to 0.7. It also turns out naive's simple
+round-robin ("longest untouched") is a strong, hard-to-beat baseline in this
+simulator: several other hand-written heuristics (textbook
+prerequisite-gated introduction + lowest-current-retention review, and an
+earliest-deadline-first urgency scheduler) scored 5%–20% *worse* than naive,
+not better. See the revised non-degeneracy test below.
 
 ## Policy interface (`tasks/adaptive_curriculum/starter.py`)
 
@@ -234,7 +252,7 @@ def evaluate(solution_path, workdir) -> {"score": float, "log": str}:
             learner, session clock restarts at 0, no state or history
             carries over between learners; the same choose_action
             function is simply called again from a clean slate):
-        run simulator.run_episode(policy.choose_action, topics, learner, budget=300)
+        run simulator.run_episode(policy.choose_action, topics, learner, budget=3000)
         record sessions_to_mastery (or the smooth over-budget score)
     discovered_score = mean(the 7 results)
     run the same 7-learner loop with a fixed textbook baseline policy to
@@ -258,10 +276,15 @@ the existing evidence-chain machinery with no pipeline changes needed.
   retrievability bonus peaks at recall ≈ 0.7; mastery detection fires
   correctly at the threshold; introducing with weak/no prerequisites
   produces reduced (not zero, not crashing) stability growth.
-- A non-degeneracy test: a hand-written policy that reviews each topic as
-  its retention crosses ~0.75 must score meaningfully better than the naive
-  starter baseline on the same learner population — confirms the benchmark
-  has real signal for Discovery to search over.
+- A non-degeneracy test: an obviously-bad hand-written policy (introduce one
+  topic, then review only that same topic forever, ignoring the other 19)
+  must score far worse than the naive starter baseline on the same learner
+  population — confirms the benchmark actually responds to policy quality
+  rather than returning a constant regardless of input. (An earlier draft of
+  this test required a "smarter" hand-written policy to beat naive; direct
+  simulation showed naive round-robin is a strong baseline that simple
+  greedy heuristics don't reliably beat, so that formulation was dropped —
+  see the calibration result above.)
 - `load_task` on the new directory (structural test, matches the pattern
   used for `bin_packing`).
 - Evaluator test confirming the starter produces a valid, bounded (not
