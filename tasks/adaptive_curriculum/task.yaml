@@ -1,0 +1,18 @@
+name: adaptive_curriculum
+description: >
+  Discover a policy for teaching a curriculum of interdependent topics to a
+  population of simulated learners. Implement choose_action(state, topics,
+  session), which each session decides whether to introduce a new topic or
+  review an already-introduced one. Each learner has a private, evolving
+  retention level per topic that changes based on your choices and the
+  passage of time; you cannot observe the underlying model directly, only
+  the state dict provided each call and feedback (score, log) after a full
+  run. Your goal: minimize the average number of sessions needed until
+  every topic is retained above threshold, across a population of learners
+  with varying ability.
+metric_direction: lower
+seed_queries:
+  - spaced repetition scheduling algorithm
+  - curriculum sequencing prerequisite learning
+  - mastery learning optimal review timing
+  - forgetting curve memory retention model

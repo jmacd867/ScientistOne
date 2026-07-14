@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 
+from scientist_one.tasks.base import load_task
+
 TASK_DIR = Path("tasks/adaptive_curriculum")
 
 
@@ -17,6 +19,10 @@ def load_module(name, filename):
 
 def load_simulator():
     return load_module("adaptive_curriculum_simulator_test", "simulator.py")
+
+
+def load_starter():
+    return load_module("adaptive_curriculum_starter_test", "starter.py")
 
 
 def test_recall_decays_over_elapsed_sessions():
@@ -161,3 +167,61 @@ def test_learners_json_has_7_archetypes_with_positive_params():
         assert isinstance(learner["name"], str) and learner["name"]
         assert learner["learning_rate"] > 0
         assert learner["difficulty_sensitivity"] > 0
+
+
+def test_task_yaml_loads_with_correct_metadata():
+    task = load_task(TASK_DIR)
+    assert task.name == "adaptive_curriculum"
+    assert task.metric_direction == "lower"
+    assert len(task.seed_queries) > 0
+
+
+def test_starter_introduces_first_topic_when_none_introduced():
+    starter = load_starter()
+    topics = {
+        "a": {"name": "A", "prerequisites": [], "difficulty": 1},
+        "b": {"name": "B", "prerequisites": [], "difficulty": 1},
+    }
+    state = {
+        "a": {"introduced": False, "estimated_retention": 0.0, "sessions_since_touched": None},
+        "b": {"introduced": False, "estimated_retention": 0.0, "sessions_since_touched": None},
+    }
+    action = starter.choose_action(state, topics, 0)
+    assert action == {"action": "introduce", "topic_id": "a"}
+
+
+def test_starter_reviews_longest_untouched_when_all_introduced():
+    starter = load_starter()
+    topics = {
+        "a": {"name": "A", "prerequisites": [], "difficulty": 1},
+        "b": {"name": "B", "prerequisites": [], "difficulty": 1},
+    }
+    state = {
+        "a": {"introduced": True, "estimated_retention": 0.5, "sessions_since_touched": 3},
+        "b": {"introduced": True, "estimated_retention": 0.5, "sessions_since_touched": 5},
+    }
+    action = starter.choose_action(state, topics, 10)
+    assert action == {"action": "review", "topic_id": "b"}
+
+
+def test_starter_tie_break_uses_topics_dict_order():
+    starter = load_starter()
+    topics = {
+        "a": {"name": "A", "prerequisites": [], "difficulty": 1},
+        "b": {"name": "B", "prerequisites": [], "difficulty": 1},
+    }
+    state = {
+        "a": {"introduced": True, "estimated_retention": 0.5, "sessions_since_touched": 4},
+        "b": {"introduced": True, "estimated_retention": 0.5, "sessions_since_touched": 4},
+    }
+    action = starter.choose_action(state, topics, 10)
+    assert action == {"action": "review", "topic_id": "a"}
+
+
+def test_starter_runs_full_episode_on_real_data_without_crashing():
+    sim = load_simulator()
+    starter = load_starter()
+    topics = load_topics()
+    learner = load_learners()[0]
+    score = sim.run_episode(starter.choose_action, topics, learner, budget=200)
+    assert score > 0
