@@ -10,6 +10,7 @@ class TaskSpec(BaseModel):
     description: str
     metric_direction: Literal["higher", "lower"]
     seed_queries: list[str] = []
+    allowed_imports: list[str] = []
     timeout_s: int | None = None
     path: Path
 

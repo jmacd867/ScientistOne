@@ -28,3 +28,18 @@ def test_missing_file_raises(tmp_path):
     (d / "evaluator.py").unlink()
     with pytest.raises(FileNotFoundError):
         load_task(d)
+
+
+def test_allowed_imports_defaults_empty(tmp_path):
+    d = make_task_dir(tmp_path,
+        "name: demo\ndescription: a demo\nmetric_direction: lower\n")
+    task = load_task(d)
+    assert task.allowed_imports == []
+
+
+def test_allowed_imports_parsed(tmp_path):
+    d = make_task_dir(tmp_path,
+        "name: demo\ndescription: a demo\nmetric_direction: higher\n"
+        "allowed_imports: [torch]\n")
+    task = load_task(d)
+    assert task.allowed_imports == ["torch"]
