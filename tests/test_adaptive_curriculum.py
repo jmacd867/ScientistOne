@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import math
 from pathlib import Path
 
@@ -116,3 +117,47 @@ def test_introduce_is_noop_when_already_introduced():
     sim.introduce(ts, topic, learner, {}, session=99)
     assert ts.stability == 5.0
     assert ts.last_touched_session == 2
+
+
+def load_topics():
+    return json.loads((TASK_DIR / "data" / "topics.json").read_text())
+
+
+def load_learners():
+    return json.loads((TASK_DIR / "data" / "learners.json").read_text())
+
+
+def test_topics_json_has_20_entries_no_duplicates():
+    topics = load_topics()
+    assert len(topics) == 20
+    ids = [t["id"] for t in topics]
+    assert len(ids) == len(set(ids))
+    assert ids[0] == "numpy_arrays"
+    assert ids[-1] == "grpo"
+
+
+def test_topics_json_prerequisites_appear_earlier_in_array_order():
+    topics = load_topics()
+    seen = set()
+    for t in topics:
+        for p in t["prerequisites"]:
+            assert p in seen, (
+                f"{t['id']} depends on {p!r}, which must appear earlier in "
+                "topics.json (array order is load-bearing)")
+        seen.add(t["id"])
+
+
+def test_topics_json_entries_have_required_fields():
+    for t in load_topics():
+        assert isinstance(t["name"], str) and t["name"]
+        assert isinstance(t["prerequisites"], list)
+        assert 1 <= t["difficulty"] <= 5
+
+
+def test_learners_json_has_7_archetypes_with_positive_params():
+    learners = load_learners()
+    assert len(learners) == 7
+    for learner in learners:
+        assert isinstance(learner["name"], str) and learner["name"]
+        assert learner["learning_rate"] > 0
+        assert learner["difficulty_sensitivity"] > 0
