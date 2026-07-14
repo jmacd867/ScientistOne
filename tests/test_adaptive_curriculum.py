@@ -262,3 +262,42 @@ def test_evaluator_obviously_bad_solution_scores_far_worse_than_starter(tmp_path
     starter_result = ev.evaluate(str(TASK_DIR / "starter.py"), str(tmp_path))
     bad_result = ev.evaluate(str(bad), str(tmp_path))
     assert bad_result["score"] > starter_result["score"] * 2
+
+
+def test_population_non_degeneracy_bad_policy_much_worse_than_naive():
+    """Confirms the benchmark responds to policy quality across the full
+    7-learner population (not just one learner) -- an obviously-bad policy
+    that only ever touches a single topic must score far worse than the
+    naive starter, on average across all archetypes."""
+    sim = load_simulator()
+    starter = load_starter()
+    topics = load_topics()
+    learners = load_learners()
+
+    def bad_policy(state, topics, session):
+        tid = next(iter(topics))
+        if not state[tid]["introduced"]:
+            return {"action": "introduce", "topic_id": tid}
+        return {"action": "review", "topic_id": tid}
+
+    naive_scores = [sim.run_episode(starter.choose_action, topics, l) for l in learners]
+    bad_scores = [sim.run_episode(bad_policy, topics, l) for l in learners]
+
+    naive_mean = sum(naive_scores) / len(naive_scores)
+    bad_mean = sum(bad_scores) / len(bad_scores)
+    assert bad_mean > naive_mean * 2
+
+
+def test_naive_starter_does_not_hit_budget_cap_for_any_learner():
+    """Regression guard for the calibration bug found before implementation:
+    the original constants made every policy hit the BUDGET cap with no
+    differentiation. This confirms the corrected constants keep naive's
+    per-learner scores below the cap (score < BUDGET means mastery was
+    actually reached, not just approached)."""
+    sim = load_simulator()
+    starter = load_starter()
+    topics = load_topics()
+    learners = load_learners()
+
+    scores = [sim.run_episode(starter.choose_action, topics, l) for l in learners]
+    assert all(score < sim.BUDGET for score in scores)

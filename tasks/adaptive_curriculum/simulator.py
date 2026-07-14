@@ -1,3 +1,13 @@
+"""Deterministic synthetic-learner simulator for the adaptive_curriculum task.
+
+Constants below were validated by direct simulation before implementation
+(see docs/superpowers/specs/2026-07-14-adaptive-curriculum-task-design.md,
+"Calibration result"): the first-drafted values made mastery unreachable for
+every policy tried. BASE_INTRODUCTION_GAIN and BASE_REVIEW_GAIN were scaled
+20x and BUDGET scaled 10x from that draft to produce a well-behaved score
+range (naive baseline: 60-180 sessions across the 7 learner archetypes, no
+policy hitting the cap).
+"""
 import math
 from dataclasses import dataclass
 
