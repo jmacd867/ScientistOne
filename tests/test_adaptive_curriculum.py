@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import math
+import re
 from pathlib import Path
 
 import pytest
@@ -225,3 +226,39 @@ def test_starter_runs_full_episode_on_real_data_without_crashing():
     learner = load_learners()[0]
     score = sim.run_episode(starter.choose_action, topics, learner, budget=200)
     assert score > 0
+
+
+def load_evaluator():
+    return load_module("adaptive_curriculum_evaluator_test", "evaluator.py")
+
+
+def test_evaluator_starter_produces_bounded_nontrivial_score(tmp_path):
+    ev = load_evaluator()
+    result = ev.evaluate(str(TASK_DIR / "starter.py"), str(tmp_path))
+    assert 10.0 < result["score"] < 3000.0 + 20 * 20
+    assert "baseline_score=" in result["log"]
+
+
+def test_evaluator_log_reports_sensible_distinct_baseline_score(tmp_path):
+    ev = load_evaluator()
+    result = ev.evaluate(str(TASK_DIR / "starter.py"), str(tmp_path))
+    match = re.search(r"baseline_score=([\d.]+)", result["log"])
+    assert match is not None
+    baseline_score = float(match.group(1))
+    assert baseline_score > 0
+    assert baseline_score != result["score"]  # starter and textbook are different policies
+
+
+def test_evaluator_obviously_bad_solution_scores_far_worse_than_starter(tmp_path):
+    bad = tmp_path / "bad_solution.py"
+    bad.write_text(
+        "def choose_action(state, topics, session):\n"
+        "    tid = next(iter(topics))\n"
+        "    if not state[tid]['introduced']:\n"
+        "        return {'action': 'introduce', 'topic_id': tid}\n"
+        "    return {'action': 'review', 'topic_id': tid}\n"
+    )
+    ev = load_evaluator()
+    starter_result = ev.evaluate(str(TASK_DIR / "starter.py"), str(tmp_path))
+    bad_result = ev.evaluate(str(bad), str(tmp_path))
+    assert bad_result["score"] > starter_result["score"] * 2
