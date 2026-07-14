@@ -6,6 +6,7 @@ dependencies = ["ollama", "httpx", "pydantic>=2", "pyyaml"]
 
 [project.optional-dependencies]
 dev = ["pytest"]
+gpu = ["torch"]
 
 [project.scripts]
 scientist-one = "scientist_one.cli:main"
@@ -18,5 +19,8 @@ build-backend = "setuptools.build_meta"
 include = ["scientist_one*"]
 
 [tool.pytest.ini_options]
-markers = ["live: requires a running Ollama server"]
-addopts = "-m 'not live'"
+markers = [
+    "live: requires a running Ollama server",
+    "gpu: requires a CUDA-capable GPU",
+]
+addopts = "-m 'not live and not gpu'"
