@@ -1,0 +1,18 @@
+name: memory_bandwidth
+description: >
+  Maximize achieved GPU memory bandwidth (GB/s) for a STREAM-style triad
+  operation (c = a + scalar * b) on CUDA tensors already resident in GPU
+  memory. The starter implementation is a naive elementwise expression that
+  allocates an avoidable intermediate tensor. Discover kernel-level changes
+  (in-place ops, fusion, avoiding intermediate allocations, torch.compile,
+  custom kernels) that increase measured bandwidth, without changing the
+  output dtype or shape. Higher GB/s is better.
+metric_direction: higher
+allowed_imports: [torch]
+timeout_s: 120
+seed_queries:
+  - GPU memory bandwidth STREAM benchmark
+  - roofline model memory-bound kernel optimization
+  - CUDA kernel fusion reduce memory traffic
+  - unified memory bandwidth Grace Blackwell superchip
+  - PyTorch avoid intermediate tensor allocation elementwise
