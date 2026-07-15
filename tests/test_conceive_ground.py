@@ -6,7 +6,7 @@ from scientist_one.evidence import EvidenceStore
 from scientist_one.llm import FakeBackend, LLMClient
 from scientist_one.tasks.base import load_task
 from scientist_one.writer.conceive import conceive
-from scientist_one.writer.ground import ground_check, normalize_tags
+from scientist_one.writer.ground import ground_check, normalize_tags, numbers_in_text
 
 TASK = load_task(Path("tasks/bin_packing"))
 
@@ -102,6 +102,34 @@ def test_normalize_tags_adds_missing_ev_prefix_latex_escaped():
     # both the braces and the underscore: $\{ev\_0025\}$.
     text = "Fused in one pass $\\{ev\\_0025\\}$."
     assert normalize_tags(text) == "Fused in one pass {ev:ev_0025}."
+
+
+def test_numbers_in_text_parses_comma_grouped_integer():
+    # Production failure mode: "32,000,000" was read as three separate
+    # numbers (32, 0, 0) because the comma breaks up the digit run, so a
+    # correct, evidence-backed claim like "n = 32,000,000" got flagged as
+    # having unsupported numbers and was progressively deleted by the
+    # refiner over 3 rounds trying (and failing) to fix an impossible flag.
+    assert numbers_in_text("n = 32,000,000") == [32000000.0]
+
+
+def test_numbers_in_text_parses_comma_grouped_with_decimal():
+    assert numbers_in_text("Total cost: $1,234.56") == [1234.56]
+
+
+def test_numbers_in_text_still_ignores_single_digits():
+    # Preserve existing behavior: a lone digit (list markers, small counts)
+    # isn't treated as a "claim number" needing evidence support.
+    assert numbers_in_text("item 3 of 5") == []
+
+
+def test_ground_check_passes_claim_with_comma_grouped_number(tmp_path):
+    store = EvidenceStore(tmp_path / "e.jsonl")
+    ev = store.append("eval-result", "discovery",
+                      {"ok": True, "score": 222.56,
+                       "log": "n=32000000: 214.35 GB/s\nmean: 222.56 GB/s"})
+    narrative = f"* **n = 32,000,000:** 214.35 GB/s {{ev:{ev}}}"
+    assert ground_check(narrative, store, 0.01) == []
 
 
 def test_ground_check_catches_number_hidden_in_bare_tag(tmp_path):

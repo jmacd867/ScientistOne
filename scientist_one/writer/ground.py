@@ -6,7 +6,11 @@ from pydantic import BaseModel
 from ..evidence import EvidenceStore
 
 TAG_RE = re.compile(r"\{ev:(ev_\d+)\}")
-_NUM_RE = re.compile(r"\d+\.\d+|\d{2,}")
+# Comma-grouped integer (optionally with a decimal tail) first, so a number
+# like "32,000,000" is read as one value instead of the comma splitting it
+# into three digit runs ("32", "000", "000") that each spuriously fail an
+# evidence-support check for a claim that was actually correct.
+_NUM_RE = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+\.\d+|\d{2,}")
 # Sentence boundary: after .!? unless a {ev:...} tag follows (tags trail their
 # sentence), and after a closing tag brace.
 _SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?!\{ev:)|(?<=\})\s+")
@@ -95,10 +99,14 @@ def near_miss_hint(tag: str, known_ids: set[str]) -> str:
     return f" (did you mean {candidate}?)" if candidate in known_ids else ""
 
 
+def _parse_num(s: str) -> float:
+    return float(s.replace(",", ""))
+
+
 def numbers_in_text(s: str) -> list[float]:
     s = TAG_RE.sub("", s)
     s = _LOOSE_TAG_RE.sub("", s)
-    return [float(m) for m in _NUM_RE.findall(s)]
+    return [_parse_num(m) for m in _NUM_RE.findall(s)]
 
 
 def numbers_in_payload(obj) -> list[float]:
@@ -107,7 +115,7 @@ def numbers_in_payload(obj) -> list[float]:
     if isinstance(obj, (int, float)):
         return [float(obj)]
     if isinstance(obj, str):
-        return [float(m) for m in _NUM_RE.findall(obj)]
+        return [_parse_num(m) for m in _NUM_RE.findall(obj)]
     if isinstance(obj, dict):
         return [n for v in obj.values() for n in numbers_in_payload(v)]
     if isinstance(obj, list):

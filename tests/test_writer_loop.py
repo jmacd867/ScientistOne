@@ -41,6 +41,18 @@ def test_resolve_keeps_original_on_empty_reply(tmp_path):
     assert resolve(llm, "original", ["issue"]) == "original"
 
 
+def test_resolve_normalizes_tags_in_reply(tmp_path):
+    # conceive() and the verifier's own refine loop both normalize_tags()
+    # their LLM output before it's checked again; resolve() didn't, so a
+    # malformed tag introduced mid-fix (e.g. a multi-ID bracket) survived
+    # into the next round's ground_check as unfixable, instead of being
+    # expanded into real, checkable tags immediately.
+    llm = LLMClient(Config(), tmp_path,
+                    backend=FakeBackend(["Fixed. {ev:ev_0001, ev:ev_0002}"]))
+    result = resolve(llm, "original", ["issue"])
+    assert result == "Fixed. {ev:ev_0001}{ev:ev_0002}"
+
+
 def test_loop_stops_when_clean(tmp_path):
     store, ev, disc = seeded(tmp_path)
     clean = f"The ratio is 1.08. {{ev:{ev}}}"

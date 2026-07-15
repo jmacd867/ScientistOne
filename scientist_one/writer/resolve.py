@@ -1,4 +1,5 @@
 from ..llm import LLMClient
+from .ground import normalize_tags
 
 
 def resolve(llm: LLMClient, narrative: str, issues: list[str]) -> str:
@@ -11,4 +12,4 @@ def resolve(llm: LLMClient, narrative: str, issues: list[str]) -> str:
         "narrative only.",
         f"Narrative:\n{narrative}\n\nIssues to fix:\n{issue_list}",
     )
-    return reply if reply.strip() else narrative
+    return normalize_tags(reply) if reply.strip() else narrative
