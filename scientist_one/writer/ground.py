@@ -6,7 +6,11 @@ from pydantic import BaseModel
 from ..evidence import EvidenceStore
 
 TAG_RE = re.compile(r"\{ev:(ev_\d+)\}")
-_NUM_RE = re.compile(r"\d+\.\d+|\d{2,}")
+# Comma-grouped integer (optionally with a decimal tail) first, so a number
+# like "32,000,000" is read as one value instead of the comma splitting it
+# into three digit runs ("32", "000", "000") that each spuriously fail an
+# evidence-support check for a claim that was actually correct.
+_NUM_RE = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+\.\d+|\d{2,}")
 # Sentence boundary: after .!? unless a {ev:...} tag follows (tags trail their
 # sentence), and after a closing tag brace.
 _SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?!\{ev:)|(?<=\})\s+")
@@ -18,6 +22,13 @@ _MULTI_TAG_RE = re.compile(r"[\{\[]\s*ev:\s*(ev_\d+(?:\s*,\s*ev:\s*ev_\d+)*)\s*[
 # don't match TAG_RE/_MULTI_TAG_RE's strict ev_\d+ requirement at all, so
 # they don't silently leak their embedded digits into a numeric-claim check.
 _LOOSE_TAG_RE = re.compile(r"[\{\[]\s*ev:\s*([^{}\[\]]*?)\s*[\}\]]")
+# Citation missing the "ev:" prefix entirely — e.g. "{ev_0025}", optionally
+# wrapped in backticks or dollar signs (LaTeX math mode), with the brace and
+# underscore themselves sometimes backslash-escaped: "$\{ev\_0025\}$". The
+# "ev:" requirement in every regex above means this shape is otherwise
+# invisible as a tag, so its digits leak into the numeric-claim check as an
+# apparently unsupported number.
+_BARE_ID_RE = re.compile(r"[`$]*\\?\{\\?ev\\?_(\d+)\\?\}[`$]*")
 
 
 def normalize_tags(text: str) -> str:
@@ -32,6 +43,10 @@ def normalize_tags(text: str) -> str:
     canonical tag per ID before any tag-based logic runs. Already-canonical
     text passes through unchanged (idempotent).
 
+    Also fixes citations missing the "ev:" prefix entirely (e.g. "{ev_0025}"
+    or LaTeX-escaped "$\\{ev\\_0025\\}$") — a distinct malformation from the
+    bracket/multi-ID cases above, since those all still contain "ev:".
+
     Does NOT fix a wrong ID (e.g. a dropped digit like "ev_016" for
     "ev_0016") — that's a real hallucination the caller should still catch
     as an unknown-evidence violation, not something to paper over here.
@@ -39,7 +54,8 @@ def normalize_tags(text: str) -> str:
     def _expand(match: re.Match) -> str:
         ids = re.findall(r"ev_\d+", match.group(1))
         return "".join(f"{{ev:{i}}}" for i in ids)
-    return _MULTI_TAG_RE.sub(_expand, text)
+    text = _MULTI_TAG_RE.sub(_expand, text)
+    return _BARE_ID_RE.sub(lambda m: f"{{ev:ev_{m.group(1)}}}", text)
 
 
 class GroundIssue(BaseModel):
@@ -83,10 +99,14 @@ def near_miss_hint(tag: str, known_ids: set[str]) -> str:
     return f" (did you mean {candidate}?)" if candidate in known_ids else ""
 
 
+def _parse_num(s: str) -> float:
+    return float(s.replace(",", ""))
+
+
 def numbers_in_text(s: str) -> list[float]:
     s = TAG_RE.sub("", s)
     s = _LOOSE_TAG_RE.sub("", s)
-    return [float(m) for m in _NUM_RE.findall(s)]
+    return [_parse_num(m) for m in _NUM_RE.findall(s)]
 
 
 def numbers_in_payload(obj) -> list[float]:
@@ -95,7 +115,7 @@ def numbers_in_payload(obj) -> list[float]:
     if isinstance(obj, (int, float)):
         return [float(obj)]
     if isinstance(obj, str):
-        return [float(m) for m in _NUM_RE.findall(obj)]
+        return [_parse_num(m) for m in _NUM_RE.findall(obj)]
     if isinstance(obj, dict):
         return [n for v in obj.values() for n in numbers_in_payload(v)]
     if isinstance(obj, list):

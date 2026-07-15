@@ -5,7 +5,7 @@ from scientist_one.config import Config
 from scientist_one.discovery.auditor import audit_solution
 from scientist_one.discovery.solver import solve
 from scientist_one.llm import FakeBackend, LLMClient
-from scientist_one.tasks.base import load_task
+from scientist_one.tasks.base import TaskSpec, load_task
 
 TASK = load_task(Path("tasks/bin_packing"))
 IDEA = {"title": "FFD", "approach": "sort desc", "rationale": "classic"}
@@ -37,3 +37,31 @@ def test_audit_degrades_unflagged(tmp_path):
     v = audit_solution(llm, TASK, CODE)
     assert v.flagged is False
     assert v.reason == "audit unavailable"
+
+
+def test_solve_prompt_stdlib_only_by_default(tmp_path):
+    captured = {}
+
+    def backend(model, system, user, format):
+        captured["system"] = system
+        return f"```python\n{CODE}```"
+
+    llm = LLMClient(Config(), tmp_path, backend=backend)
+    solve(llm, TASK, IDEA, None)
+    assert "only the standard library" in captured["system"]
+    assert "torch" not in captured["system"]
+
+
+def test_solve_prompt_lists_allowed_imports(tmp_path):
+    captured = {}
+
+    def backend(model, system, user, format):
+        captured["system"] = system
+        return f"```python\n{CODE}```"
+
+    llm = LLMClient(Config(), tmp_path, backend=backend)
+    task = TaskSpec(name="gpu-task", description="d", metric_direction="higher",
+                     allowed_imports=["torch"], path=TASK.path)
+    solve(llm, task, IDEA, None)
+    assert "torch" in captured["system"]
+    assert "only the standard library" not in captured["system"]

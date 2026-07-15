@@ -24,3 +24,17 @@ def test_tiny_live_run(tmp_path):
     if manifest["status"] != "discovery-failed":
         assert Path(manifest["best_solution_path"]).exists()
         assert Path(manifest["paper_path"]).exists()
+
+
+@pytest.mark.live
+@pytest.mark.gpu
+def test_tiny_live_run_memory_bandwidth(tmp_path):
+    config = Config(discovery={"branches": 1, "iterations": 1, "survivors": 1},
+                    investigator={"max_papers": 3},
+                    writer={"max_rounds": 2})
+    manifest = run_pipeline(config, Path("tasks/memory_bandwidth"), tmp_path)
+    assert manifest["status"] in ("complete", "not-promoted", "discovery-failed")
+    assert (tmp_path / "evidence.jsonl").exists()
+    if manifest["status"] != "discovery-failed":
+        assert Path(manifest["best_solution_path"]).exists()
+        assert Path(manifest["paper_path"]).exists()
