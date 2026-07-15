@@ -87,6 +87,35 @@ def test_ground_check_catches_number_hidden_in_malformed_tag(tmp_path):
     assert ground_check(normalize_tags(raw), store, 0.01) == []
 
 
+def test_normalize_tags_adds_missing_ev_prefix():
+    text = "Achieved 197.34 GB/s {ev_0025}."
+    assert normalize_tags(text) == "Achieved 197.34 GB/s {ev:ev_0025}."
+
+
+def test_normalize_tags_adds_missing_ev_prefix_backtick_wrapped():
+    text = "Used torch.compile `{ev_0025}`."
+    assert normalize_tags(text) == "Used torch.compile {ev:ev_0025}."
+
+
+def test_normalize_tags_adds_missing_ev_prefix_latex_escaped():
+    # gemma4:26b sometimes writes citations inside LaTeX math mode, escaping
+    # both the braces and the underscore: $\{ev\_0025\}$.
+    text = "Fused in one pass $\\{ev\\_0025\\}$."
+    assert normalize_tags(text) == "Fused in one pass {ev:ev_0025}."
+
+
+def test_ground_check_catches_number_hidden_in_bare_tag(tmp_path):
+    # Production failure mode: gemma4:26b sometimes drops the "ev:" prefix
+    # entirely, writing {ev_0025} instead of {ev:ev_0025}. Before
+    # normalization this reads as zero tags plus an untagged number (the
+    # eval ID's own digits), so the verifier can't tell it apart from a real
+    # unsupported numeric claim — this was the exact failure mode that made
+    # a production paper fail all 3 automatic refine rounds.
+    store, _, ev = seeded_store(tmp_path)
+    raw = f"Score is 1.08. {{{ev}}}"
+    assert ground_check(normalize_tags(raw), store, 0.01) == []
+
+
 def test_conceive_excludes_invalid_ablations_from_prompt(tmp_path):
     store, sol, ev = seeded_store(tmp_path)
     valid_ab = store.append("ablation", "discovery",
