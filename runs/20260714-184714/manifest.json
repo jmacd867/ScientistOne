@@ -1,0 +1,9 @@
+{
+  "task_path": "tasks/adaptive_curriculum",
+  "references_path": "runs/20260714-184714/references.json",
+  "best_solution_path": "runs/20260714-184714/solutions/b1_i3.py",
+  "best_eval_id": "ev_0041",
+  "paper_path": "runs/20260714-184714/paper.md",
+  "promoted": true,
+  "status": "complete"
+}

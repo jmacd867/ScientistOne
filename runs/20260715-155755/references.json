@@ -1,0 +1,196 @@
+[
+  {
+    "title": "DPVO-QAT++: Heterogeneous QAT and CUDA Kernel Fusion for High-Performance Deep Patch Visual Odometry",
+    "authors": [
+      "Cheng Liao"
+    ],
+    "year": 2025,
+    "abstract": "Deep learning-based Visual SLAM (vSLAM) systems exhibit exceptional geometric reasoning capabilities, yet their prohibitive computational overhead severely restricts deployment on resource-constrained autonomous platforms. This paper presents a hierarchical quantization optimization framework, DPVO-QAT++ (DPVO-QAT++: Heterogeneous QAT and CUDA Kernel Fusion for High-Performance Deep Patch Visual Odometry). Through the synergistic integration of learnable scale parameterization, a heterogeneous precision design for the Visual Odometry (VO) front-end and back-end (front-end floating-point fake quantization with FP16/FP32; back-end full precision), and GPU-native kernel fusion for fake quantization (custom CUDA kernels), our framework significantly reduces memory footprint and increases processing speed while preserving the trajectory accuracy of the original model. On the TartanAir dataset, our framework achieves an average FPS increase of 52.1%, a 29.1% reduction in median latency, and a 64.9% reduction in peak GPU memory reservation, while maintaining trajectory accuracy (ATE) comparable to the original DPVO model across 32 validation sequences. On the EuRoC dataset, it realizes an average FPS increase of 30.1%, a 23.1% reduction in median latency, and a 37.7% reduction in peak GPU memory reservation, maintaining comparable trajectory accuracy (ATE) across 11 validation sequences. Experimental results demonstrate that DPVO-QAT++ effectively bridges the gap between high-precision deep VO and the efficiency requirements for practical deployment, offering a viable engineering paradigm for the application of this technology on real-world embedded platforms. Keywords: Visual Odometry, Heterogeneous Precision Architecture, Quantization-Aware Training, CUDA Kernel Fusion, Scale-Only Training, Deep Patch Visual Odometry, GPU-Native Kernel Fusion.",
+    "url": "http://arxiv.org/abs/2511.12653v1",
+    "source": "arxiv",
+    "external_id": "2511.12653v1"
+  },
+  {
+    "title": "GPU Forecasters: Language Models as Selective Surrogates for Kernel Runtime Optimization",
+    "authors": [
+      "Zaid Khan",
+      "Justin Chih-Yao Chen",
+      "Jaemin Cho",
+      "Elias Stengel-Eskin",
+      "Mohit Bansal"
+    ],
+    "year": 2026,
+    "abstract": "GPU kernels are the workhorse of modern deep learning, and optimizing them (via evolutionary search or coding agents) usually requires repeated measurement on target hardware. While these measurements provide the ground-truth signal necessary for kernel search, they are costly, because each evaluation of a kernel requires compilation and repeated execution on a GPU. As improvements in LLM inference reduce the cost of writing novel kernels and LLM-driven searches scale to large search budgets, on-device evaluation becomes a bottleneck. To address this, we study how LLMs can serve as selective GPU surrogates for kernel evaluation, by forecasting the performance of proposed kernels. A useful surrogate should be accurate, and it should be selective, by knowing when it could be wrong, and deferring to the GPU. To evaluate surrogates, we measure whether their forecasts are accurate, calibrated, and practically useful for recovering fast kernels under limited GPU-measurement budgets. Next, we study whether reinforcement learning can improve forecast accuracy and confidence calibration. Our experiments demonstrate that LLMs can accurately forecast relative kernel performance, that their utility can be improved through reinforcement learning. Used inside a kernel search, the surrogate lets the search consider several times as many candidates under the same GPU evaluation budget, and that leads to finding faster kernels than an equal-budget baseline. These results suggest that LLMs can play a broader role in kernel optimization, by acting as virtual models of a GPU rather than solely as kernel generators for search.",
+    "url": "http://arxiv.org/abs/2605.31464v1",
+    "source": "arxiv",
+    "external_id": "2605.31464v1"
+  },
+  {
+    "title": "Computation-Bandwidth-Memory Trade-offs: A Unified Paradigm for AI Infrastructure",
+    "authors": [
+      "Yuankai Fan",
+      "Qizhen Weng",
+      "Xuelong Li"
+    ],
+    "year": 2025,
+    "abstract": "Large-scale artificial intelligence models are transforming industries and redefining human machine collaboration. However, continued scaling exposes critical limitations in hardware, including constraints on computation, bandwidth, and memory. These dimensions are tightly interconnected, so improvements in one often create bottlenecks in others, making isolated optimizations less effective. Balancing them to maximize system efficiency remains a central challenge in scalable AI design. To address this challenge, we introduce {Computation-Bandwidth-Memory Trade-offs}, termed the {AI Trinity}, a unified paradigm that positions {computation}, {bandwidth}, and {memory} as coequal pillars for next-generation AI infrastructure. AI Trinity enables dynamic allocation of resources across these pillars, alleviating single-resource bottlenecks and adapting to diverse scenarios to optimize system performance. Within this framework, AI Trinity identifies three fundamental trade-offs: (1) {More Computation$\\rightarrow$Less Bandwidth}, wherein computational resources are exploited to reduce data transmission under limited bandwidth conditions, (2) {More Bandwidth$\\rightarrow$Less Memory}, which exploits abundant communication capacity to populate or refresh memory when local storage resources are constrained, and (3) {More Memory$\\rightarrow$Less Computation}, whereby storage capacity are utilized to mitigate redundant computation when computational costs are prohibitive. We illustrate the effectiveness of AI Trinity through representative system designs spanning edge-cloud communication, large-scale distributed training, and model inference. The innovations embodied in AI Trinity advance a new paradigm for scalable AI infrastructure, providing both a conceptual foundation and practical guidance for a broad range of application scenarios.",
+    "url": "http://arxiv.org/abs/2601.11577v1",
+    "source": "arxiv",
+    "external_id": "2601.11577v1"
+  },
+  {
+    "title": "GPU-Augmented OLAP Execution Engine: GPU Offloading",
+    "authors": [
+      "Ilsun Chang"
+    ],
+    "year": 2025,
+    "abstract": "Modern OLAP systems have mitigated I/O bottlenecks via storage-compute separation and columnar layouts, but CPU costs in the execution layer (especially Top-K selection and join probe) are emerging as new bottlenecks at scale. This paper proposes a hybrid architecture that augments existing vectorized execution by selectively offloading only high-impact primitives to the GPU. To reduce data movement, we use key-only transfer (keys and pointers) with late materialization. We further introduce a Risky Gate (risk-aware gating) that triggers offloading only in gain/risk intervals based on input size, transfer, kernel and post-processing costs, and candidate-set complexity (K, M). Using PostgreSQL microbenchmarks and GPU proxy measurements, we observe improved tail latency (P95/P99) under gated offloading compared to always-on GPU offloading. This work extends the risk-aware gating principle used for optimizer-stage GPU-assisted measurement (arXiv:2512.19750) to execution-layer OLAP primitives.",
+    "url": "http://arxiv.org/abs/2601.19911v1",
+    "source": "arxiv",
+    "external_id": "2601.19911v1"
+  },
+  {
+    "title": "StreamBox-HBM: Stream Analytics on High Bandwidth Hybrid Memory",
+    "authors": [
+      "Hongyu Miao",
+      "Myeongjae Jeon",
+      "Gennady Pekhimenko",
+      "Kathryn S. McKinley",
+      "Felix Xiaozhu Lin"
+    ],
+    "year": 2019,
+    "abstract": "Stream analytics have an insatiable demand for memory and performance. Emerging hybrid memories combine commodity DDR4 DRAM with 3D-stacked High Bandwidth Memory (HBM) DRAM to meet such demands. However, achieving this promise is challenging because (1) HBM is capacity-limited and (2) HBM boosts performance best for sequential access and high parallelism workloads. At first glance, stream analytics appear a particularly poor match for HBM because they have high capacity demands and data grouping operations, their most demanding computations, use random access. This paper presents the design and implementation of StreamBox-HBM, a stream analytics engine that exploits hybrid memories to achieve scalable high performance. StreamBox-HBM performs data grouping with sequential access sorting algorithms in HBM, in contrast to random access hashing algorithms commonly used in DRAM. StreamBox-HBM solely uses HBM to store Key Pointer Array (KPA) data structures that contain only partial records (keys and pointers to full records) for grouping operations. It dynamically creates and manages prodigious data and pipeline parallelism, choosing when to allocate KPAs in HBM. It dynamically optimizes for both the high bandwidth and limited capacity of HBM, and the limited bandwidth and high capacity of standard DRAM. StreamBox-HBM achieves 110 million records per second and 238 GB/s memory bandwidth while effectively utilizing all 64 cores of Intel's Knights Landing, a commercial server with hybrid memory. It outperforms stream engines with sequential access algorithms without KPAs by 7x and stream engines with random access algorithms by an order of magnitude in throughput. To the best of our knowledge, StreamBox-HBM is the first stream engine optimized for hybrid memories.",
+    "url": "http://arxiv.org/abs/1901.01328v2",
+    "source": "arxiv",
+    "external_id": "1901.01328v2"
+  },
+  {
+    "title": "Performance Investigation of Virtual Private Networks with Different Bandwidth Allocations",
+    "authors": [
+      "Mahalakshmi Chidambara Natarajan",
+      "Ramaswamy Muthiah",
+      "Alamelu Nachiappan"
+    ],
+    "year": 2010,
+    "abstract": "A Virtual Private Network (VPN) provides private network connections over a publicly accessible shared network. The effective allocation of bandwidth for VPNs assumes significance in the present scenario due to varied traffic. Each VPN endpoint specifies bounds on the total amount of traffic that it is likely to send or receive at any time. The network provider tailors the VPN so that there is sufficient bandwidth for any traffic matrix that is consistent with these bounds. The approach incorporates the use of Ad-hoc On demand Distance Vector (AODV) protocol, with a view to accomplish an enhancement in the performance of the mobile networks. The NS2 based simulation results are evaluated in terms of its metrics for different bandwidth allocations, besides analyzing its performance in the event of exigencies such as link failures. The results highlight the suitability of the proposed strategy in the context of real time applications.",
+    "url": "http://arxiv.org/abs/1002.1152v1",
+    "source": "arxiv",
+    "external_id": "1002.1152v1"
+  },
+  {
+    "title": "A Memory Bandwidth-Efficient Hybrid Radix Sort on GPUs",
+    "authors": [
+      "Elias Stehle",
+      "Hans-Arno Jacobsen"
+    ],
+    "year": 2016,
+    "abstract": "Sorting is at the core of many database operations, such as index creation, sort-merge joins, and user-requested output sorting. As GPUs are emerging as a promising platform to accelerate various operations, sorting on GPUs becomes a viable endeavour. Over the past few years, several improvements have been proposed for sorting on GPUs, leading to the first radix sort implementations that achieve a sorting rate of over one billion 32-bit keys per second. Yet, state-of-the-art approaches are heavily memory bandwidth-bound, as they require substantially more memory transfers than their CPU-based counterparts. Our work proposes a novel approach that almost halves the amount of memory transfers and, therefore, considerably lifts the memory bandwidth limitation. Being able to sort two gigabytes of eight-byte records in as little as 50 milliseconds, our approach achieves a 2.32-fold improvement over the state-of-the-art GPU-based radix sort for uniform distributions, sustaining a minimum speed-up of no less than a factor of 1.66 for skewed distributions. To address inputs that either do not reside on the GPU or exceed the available device memory, we build on our efficient GPU sorting approach with a pipelined heterogeneous sorting algorithm that mitigates the overhead associated with PCIe data transfers. Comparing the end-to-end sorting performance to the state-of-the-art CPU-based radix sort running 16 threads, our heterogeneous approach achieves a 2.06-fold and a 1.53-fold improvement for sorting 64 GB key-value pairs with a skewed and a uniform distribution, respectively.",
+    "url": "http://arxiv.org/abs/1611.01137v2",
+    "source": "arxiv",
+    "external_id": "1611.01137v2"
+  },
+  {
+    "title": "MultiPath Memory Access: Breaking Host-GPU Bandwidth Bottlenecks in LLM Services",
+    "authors": [
+      "Lingfeng Tang",
+      "Daoping Zhang",
+      "Junjie Chen",
+      "Peihao Huang",
+      "Feng Jin",
+      "Chengguang Xu",
+      "Yuxin Chen",
+      "Feiqiang Sun",
+      "Guo Chen"
+    ],
+    "year": 2025,
+    "abstract": "Host-GPU data movement has become a latency-critical bottleneck in LLM serving, surfacing in common paths such as model-weight movement and KV cache offload/fetch. Today, each host-GPU copy is effectively confined to the PCIe path of the target GPU, even though modern multi-GPU servers contain additional PCIe links on peer GPUs and high bandwidth GPU interconnects. This leaves substantial intra-server I/O capacity unused. To address this issue, we present Multipath Memory Access (MMA), a software-defined multipath memory access system for host--GPU data transfer. To the best of our knowledge, MMA is the first software-defined system to enable efficient multipath host--GPU data transfer within a single multi-GPU server. MMA expands a single host--GPU copy across available direct and relay paths without hardware, driver, or application changes. It preserves CUDA stream semantics with a dependency-preserving Dummy Task, coordinates distributed micro-transfer completion through a lightweight synchronization mechanism, and uses queue backpressure to route traffic without explicit link-state feedback. On an 8-GPU NVIDIA H20 server, MMA achieves 245 GB/s peak host-to-GPU bandwidth, a 4.62x improvement over native CUDA copies, and reduces TTFT for KV cache fetching by 1.14-2.38x and model wake-up/switching latency by 1.12-2.48x.",
+    "url": "http://arxiv.org/abs/2512.16056v2",
+    "source": "arxiv",
+    "external_id": "2512.16056v2"
+  },
+  {
+    "title": "Benchmarking High Bandwidth Memory on FPGAs",
+    "authors": [
+      "Zeke Wang",
+      "Hongjing Huang",
+      "Jie Zhang",
+      "Gustavo Alonso"
+    ],
+    "year": 2020,
+    "abstract": "FPGAs are starting to be enhanced with High Bandwidth Memory (HBM) as a way to reduce the memory bandwidth bottleneck encountered in some applications and to give the FPGA more capacity to deal with application state. However, the performance characteristics of HBM are still not well specified, especially in the context of FPGAs. In this paper, we bridge the gap between nominal specifications and actual performance by benchmarkingHBM on a state-of-the-art FPGA, i.e., a Xilinx Alveo U280 featuring a two-stack HBM subsystem. To this end, we propose Shuhai, a benchmarking tool that allows us to demystify all the underlying details of HBM on an FPGA. FPGA-based benchmarking should also provide a more accurate picture of HBM than doing so on CPUs/GPUs, since CPUs/GPUs are noisier systems due to their complex control logic and cache hierarchy. Since the memory itself is complex, leveraging custom hardware logic to benchmark inside an FPGA provides more details as well as accurate and deterministic measurements. We observe that 1) HBM is able to provide up to 425GB/s memory bandwidth, and 2) how HBM is used has a significant impact on performance, which in turn demonstrates the importance of unveiling the performance characteristics of HBM so as to select the best approach. As a yardstick, we also applyShuhaito DDR4to show the differences between HBM and DDR4.Shuhai can be easily generalized to other FPGA boards or other generations of memory, e.g., HBM3, and DDR3. We will makeShuhaiopen-source, benefiting the community",
+    "url": "http://arxiv.org/abs/2005.04324v1",
+    "source": "arxiv",
+    "external_id": "2005.04324v1"
+  },
+  {
+    "title": "Deep In-GPU Experience Replay",
+    "authors": [
+      "Ben Parr"
+    ],
+    "year": 2018,
+    "abstract": "Experience replay allows a reinforcement learning agent to train on samples from a large amount of the most recent experiences. A simple in-RAM experience replay stores these most recent experiences in a list in RAM, and then copies sampled batches to the GPU for training. I moved this list to the GPU, thus creating an in-GPU experience replay, and a training step that no longer has inputs copied from the CPU. I trained an agent to play Super Smash Bros. Melee, using internal game memory values as inputs and outputting controller button presses. A single state in Melee contains 27 floats, so the full experience replay fits on a single GPU. For a batch size of 128, the in-GPU experience replay trained twice as fast as the in-RAM experience replay. As far as I know, this is the first in-GPU implementation of experience replay. Finally, I note a few ideas for fitting the experience replay inside the GPU when the environment state requires more memory.",
+    "url": "http://arxiv.org/abs/1801.03138v1",
+    "source": "arxiv",
+    "external_id": "1801.03138v1"
+  },
+  {
+    "title": "Stream Containers for Resource-oriented RDF Stream Processing",
+    "authors": [
+      "Daniel Schraudner",
+      "Andreas Harth"
+    ],
+    "year": 2022,
+    "abstract": "We introduce Stream Containers inspired by the Linked Data Platform as an alternative way to process RDF streams. A Stream Container represents a single RDF data stream that can be accessed in a resource-oriented way which allows for better interoperability with the existing Semantic Web infrastructure. Stream Containers are managed by webservers that are responsible for implementing the S2R operator, i.e. calculating the window for their clients. The clients on the other hand can use a standard SPARQL processor in combination with HTTP requests to do RDF processing. Query results can be converted back to an RDF stream (R2S operator) by posting the data to a Stream Container. Our approach of resource-oriented RDF stream processing can lead to a better distribution of load and thus to better worldwide scalability. We give a general overview of the proposed architecture as well as the formal semantics of the overall system.",
+    "url": "http://arxiv.org/abs/2202.13630v1",
+    "source": "arxiv",
+    "external_id": "2202.13630v1"
+  },
+  {
+    "title": "A Lock-Free, Fully GPU-Resident Architecture for the Verification of Goldbach's Conjecture",
+    "authors": [
+      "Isaac Llorente-Saguer"
+    ],
+    "year": 2026,
+    "abstract": "We present a fully device-resident, multi-GPU architecture for the large-scale computational verification of Goldbach's conjecture. In prior work, a segmented double-sieve eliminated monolithic VRAM bottlenecks but remained constrained by host-side sieve construction and PCIe transfer latency. In this work, we migrate the entire segment generation pipeline to the GPU using highly optimised L1 shared-memory tiling, achieving near-zero host-device communication during the critical verification path. To fully leverage heterogeneous multi-GPU clusters, we introduce an asynchronous, lock-free work-stealing pool that replaces static workload partitioning with atomic segment claiming, enabling $99.7$% parallel efficiency at 2 GPUs and $98.6$% at $4$ GPUs. We further implement strict mathematical overflow guards guaranteeing the soundness of the 64-bit verification pipeline up to its theoretical ceiling of $1.84 \\times 10^{19}$. On the same hardware, the new architecture achieves a $45.6\\times$ algorithmic speedup over its host-coupled predecessor at N = $10^{10}$. End-to-end, the framework verifies Goldbach's conjecture up to $10^{12}$ in $36.5$ seconds on a single NVIDIA RTX 5090, and up to $10^{13}$ in $133.5$ seconds on a four-GPU system. All code is open-source and reproducible on commodity hardware.",
+    "url": "http://arxiv.org/abs/2603.07850v1",
+    "source": "arxiv",
+    "external_id": "2603.07850v1"
+  },
+  {
+    "title": "Benchmarking Distributed Stream Processing Platforms for IoT Applications",
+    "authors": [
+      "Anshu Shukla",
+      "Yogesh Simmhan"
+    ],
+    "year": 2016,
+    "abstract": "Internet of Things (IoT) is a technology paradigm where millions of sensors monitor, and help inform or manage, physical, envi- ronmental and human systems in real-time. The inherent closed-loop re- sponsiveness and decision making of IoT applications makes them ideal candidates for using low latency and scalable stream processing plat- forms. Distributed Stream Processing Systems (DSPS) are becoming es- sential components of any IoT stack, but the efficacy and performance of contemporary DSPS have not been rigorously studied for IoT data streams and applications. Here, we develop a benchmark suite and per- formance metrics to evaluate DSPS for streaming IoT applications. The benchmark includes 13 common IoT tasks classified across various func- tional categories and forming micro-benchmarks, and two IoT applica- tions for statistical summarization and predictive analytics that leverage various dataflow compositional features of DSPS. These are coupled with stream workloads sourced from real IoT observations from smart cities. We validate the IoT benchmark for the popular Apache Storm DSPS, and present empirical results.",
+    "url": "http://arxiv.org/abs/1606.07621v2",
+    "source": "arxiv",
+    "external_id": "1606.07621v2"
+  },
+  {
+    "title": "Distilling Feedback into Memory-as-a-Tool",
+    "authors": [
+      "V\u00edctor Gallego"
+    ],
+    "year": 2026,
+    "abstract": "We propose a framework that amortizes the cost of inference-time reasoning by converting transient critiques into retrievable guidelines, through a file-based memory system and agent-controlled tool calls. We evaluate this method on the Rubric Feedback Bench, a novel dataset for rubric-based learning. Experiments demonstrate that our augmented LLMs rapidly match the performance of test-time refinement pipelines while drastically reducing inference cost.",
+    "url": "http://arxiv.org/abs/2601.05960v2",
+    "source": "arxiv",
+    "external_id": "2601.05960v2"
+  },
+  {
+    "title": "UVMBench: A Comprehensive Benchmark Suite for Researching Unified Virtual Memory in GPUs",
+    "authors": [
+      "Yongbin Gu",
+      "Wenxuan Wu",
+      "Yunfan Li",
+      "Lizhong Chen"
+    ],
+    "year": 2020,
+    "abstract": "The recent introduction of Unified Virtual Memory (UVM) in GPUs offers a new programming model that allows GPUs and CPUs to share the same virtual memory space, which shifts the complex memory management from programmers to GPU driver/ hardware and enables kernel execution even when memory is oversubscribed. Meanwhile, UVM may also incur considerable performance overhead due to tracking and data migration along with special handling of page faults and page table walk. As UVM is attracting significant attention from the research community to develop innovative solutions to these problems, in this paper, we propose a comprehensive UVM benchmark suite named UVMBench to facilitate future research on this important topic. The proposed UVMBench consists of 32 representative benchmarks from a wide range of application domains. The suite also features unified programming implementation and diverse memory access patterns across benchmarks, thus allowing thorough evaluation and comparison with current state-of-the-art. A set of experiments have been conducted on real GPUs to verify and analyze the benchmark suite behaviors under various scenarios.",
+    "url": "http://arxiv.org/abs/2007.09822v2",
+    "source": "arxiv",
+    "external_id": "2007.09822v2"
+  }
+]

@@ -4,6 +4,4 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .venv
-my_task
-runs
 .claude/settings.local.json
