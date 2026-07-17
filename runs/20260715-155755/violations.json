@@ -1,0 +1,10 @@
+[
+  {
+    "claim": "The implementation was benchmarked using large tensor sizes (up to $5.1 \\times 10^8$ elements) to evaluate scaling behavior as data movement increases across the tested range .",
+    "reason": "number 5.1 not supported by evidence ['ev_0021']"
+  },
+  {
+    "claim": "The implementation was benchmarked using large tensor sizes (up to $5.1 \\times 10^8$ elements) to evaluate scaling behavior as data movement increases across the tested range .",
+    "reason": "number 10.0 not supported by evidence ['ev_0021']"
+  }
+]

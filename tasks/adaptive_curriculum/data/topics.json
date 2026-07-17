@@ -1,0 +1,22 @@
+[
+  {"id": "numpy_arrays", "name": "NumPy array basics", "prerequisites": [], "difficulty": 1},
+  {"id": "numpy_indexing", "name": "NumPy indexing & slicing", "prerequisites": ["numpy_arrays"], "difficulty": 1},
+  {"id": "numpy_broadcasting", "name": "NumPy broadcasting rules", "prerequisites": ["numpy_arrays"], "difficulty": 2},
+  {"id": "numpy_linalg", "name": "NumPy linear algebra operations", "prerequisites": ["numpy_broadcasting"], "difficulty": 2},
+  {"id": "calculus_foundations", "name": "Calculus foundations (derivatives, chain rule)", "prerequisites": [], "difficulty": 2},
+  {"id": "jax_basics", "name": "JAX basics (arrays, jit)", "prerequisites": ["numpy_broadcasting"], "difficulty": 2},
+  {"id": "jax_autodiff", "name": "JAX automatic differentiation (grad)", "prerequisites": ["jax_basics", "calculus_foundations"], "difficulty": 3},
+  {"id": "jax_vmap", "name": "JAX vectorization with vmap", "prerequisites": ["jax_basics"], "difficulty": 2},
+  {"id": "probability_foundations", "name": "Probability foundations", "prerequisites": [], "difficulty": 2},
+  {"id": "linear_regression", "name": "Linear regression", "prerequisites": ["numpy_linalg", "calculus_foundations"], "difficulty": 2},
+  {"id": "loss_functions", "name": "Loss functions (MSE, cross-entropy)", "prerequisites": ["probability_foundations", "linear_regression"], "difficulty": 2},
+  {"id": "gradient_descent_optimizers", "name": "Gradient descent optimizers", "prerequisites": ["jax_autodiff", "loss_functions"], "difficulty": 3},
+  {"id": "logistic_regression", "name": "Logistic regression", "prerequisites": ["loss_functions", "gradient_descent_optimizers"], "difficulty": 2},
+  {"id": "neural_networks", "name": "Neural networks (MLPs)", "prerequisites": ["logistic_regression", "jax_vmap"], "difficulty": 3},
+  {"id": "attention_transformers", "name": "Attention & transformers", "prerequisites": ["neural_networks", "jax_autodiff"], "difficulty": 4},
+  {"id": "language_modeling", "name": "Language modeling", "prerequisites": ["attention_transformers"], "difficulty": 3},
+  {"id": "rl_foundations", "name": "Reinforcement learning foundations", "prerequisites": ["probability_foundations"], "difficulty": 3},
+  {"id": "policy_gradients", "name": "Policy gradient methods", "prerequisites": ["rl_foundations", "calculus_foundations"], "difficulty": 4},
+  {"id": "ppo", "name": "Proximal Policy Optimization (PPO)", "prerequisites": ["policy_gradients"], "difficulty": 4},
+  {"id": "grpo", "name": "Group Relative Policy Optimization (GRPO)", "prerequisites": ["ppo", "language_modeling"], "difficulty": 5}
+]

@@ -1,0 +1,9 @@
+[
+  {"name": "Fast learner", "learning_rate": 1.5, "difficulty_sensitivity": 0.5},
+  {"name": "Above average", "learning_rate": 1.2, "difficulty_sensitivity": 0.8},
+  {"name": "Average", "learning_rate": 1.0, "difficulty_sensitivity": 1.0},
+  {"name": "Struggles with hard topics", "learning_rate": 1.0, "difficulty_sensitivity": 1.6},
+  {"name": "Slow but steady", "learning_rate": 0.7, "difficulty_sensitivity": 0.9},
+  {"name": "Quick but shaky retention", "learning_rate": 1.3, "difficulty_sensitivity": 1.2},
+  {"name": "Below average", "learning_rate": 0.6, "difficulty_sensitivity": 1.3}
+]

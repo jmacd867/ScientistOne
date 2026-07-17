@@ -1,0 +1,1 @@
+{"brief_text": "# Research brief: memory_bandwidth\n\nThe objective is to maximize achieved GPU memory bandwidth for a STREAM-style triad operation (c = a + scalar * b) by optimizing kernel execution and reducing unnecessary overheads.\n\n## Findings\n\n## Baselines\nN/A", "brief_ids": [], "references_path": "runs/20260715-155755/references.json"}

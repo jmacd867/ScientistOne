@@ -1,0 +1,9 @@
+{
+  "task_path": "tasks/memory_bandwidth",
+  "references_path": "runs/20260715-155755/references.json",
+  "best_solution_path": "runs/20260715-155755/solutions/b0_i0.py",
+  "best_eval_id": "ev_0021",
+  "paper_path": "runs/20260715-155755/paper.draft.md",
+  "promoted": false,
+  "status": "not-promoted"
+}

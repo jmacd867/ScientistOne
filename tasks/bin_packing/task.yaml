@@ -1,0 +1,10 @@
+name: bin_packing
+description: >
+  Discover a heuristic for 1D bin packing. Implement pack(items, capacity)
+  returning a list of bins (each a list of item sizes) using as few bins as
+  possible. Score is mean(bins_used / L1 lower bound) over fixed instance
+  sets; lower is better, 1.0 is optimal.
+metric_direction: lower
+seed_queries:
+  - bin packing heuristic first fit decreasing
+  - online bin packing approximation algorithm

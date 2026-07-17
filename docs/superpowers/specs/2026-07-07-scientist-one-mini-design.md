@@ -90,9 +90,11 @@ returned it.
 2. **PEE orchestrator**: per branch, loop up to I iterations (default 4):
    - **Solve** (26b): write/revise Python solution code against the task's
      `starter.py` template, given prior scores and logs as feedback.
-   - **Evaluate**: run the solution in a sandboxed subprocess (timeout, no
-     network) against the task's `evaluator.py`; capture score + log. Crashes
-     score 0 with traceback captured — a data point, not a pipeline failure.
+   - **Evaluate**: run the solution in a sandboxed subprocess (timeout-bounded,
+     isolated from the orchestrator process) against the task's `evaluator.py`;
+     capture score + log. Crashes score 0 with traceback captured — a data
+     point, not a pipeline failure. **v1 does not deny network access** — see
+     Robustness below.
    - **Audit** (12b): check solution for specification violations (hardcoded
      answers, evaluator gaming); flagged solutions are excluded from selection.
    After each round, top-K branches (default 2) survive; pruned slots refill with
@@ -193,8 +195,14 @@ solver: {timeout_s: 60}
 
 ## Robustness
 
-- **Sandboxed execution**: solver code runs in a subprocess with timeout and no
-  network, never in the orchestrator process.
+- **Sandboxed execution**: solver code runs in a subprocess with a timeout,
+  never in the orchestrator process. **Known limitation:** v1 does not deny
+  network access — full network isolation isn't portably achievable without
+  containers (a Linux-only `unshare -n` wrapper is a possible future
+  hardening step, but adds a real dependency for a single-user local tool).
+  Solver code is LLM-generated, not adversarial-user-supplied, so this is an
+  accepted risk for this project's scope, not a promise this doc no longer
+  makes.
 - **LLM reliability**: all calls via `llm.py` — JSON-schema-constrained output
   (Ollama `format` parameter) where structure is needed, up to 2 retries on
   malformed output, every call logged (prompt, response, model, duration) to the
